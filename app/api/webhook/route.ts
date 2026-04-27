@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
+// @ts-ignore
 import TelegramBot from 'node-telegram-bot-api';
+import crypto from 'crypto';
 import { sql } from '@vercel/postgres';
 
 const bot = new TelegramBot(process.env.BOT_TOKEN!);

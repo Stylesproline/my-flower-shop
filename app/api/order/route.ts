@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+// @ts-ignore
 import TelegramBot from 'node-telegram-bot-api';
 import crypto from 'crypto';
 
