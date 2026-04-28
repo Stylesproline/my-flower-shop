@@ -1,5 +1,10 @@
 // ВМЕСТО import { sql } FROM '@vercel/postgres' ПИШЕМ ЭТО:
-import { createPool } from '@vercel/postgres';
+import { Pool } from 'pg';
+
+const pool = new Pool({
+  connectionString: process.env.MY_DATABASE_URL,
+  ssl: { rejectUnauthorized: false }
+});
 import { NextResponse } from 'next/server';
 
 const pool = createPool({
