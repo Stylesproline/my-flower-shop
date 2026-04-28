@@ -1,22 +1,22 @@
-// ВМЕСТО import { sql } FROM '@vercel/postgres' ПИШЕМ ЭТО:
+import { NextResponse } from 'next/server';
 import { Pool } from 'pg';
+import TelegramBot from 'node-telegram-bot-api';
+import crypto from 'crypto';
 
+const bot = new TelegramBot(process.env.BOT_TOKEN!);
 const pool = new Pool({
   connectionString: process.env.MY_DATABASE_URL,
   ssl: { rejectUnauthorized: false }
 });
-import { NextResponse } from 'next/server';
 
-const pool = createPool({
-  connectionString: process.env.MY_DATABASE_URL // Твоя рабочая переменная
-});
-
-export async function GET() {
+export async function POST(req: Request) {
   try {
-    // ВМЕСТО await sql`...` ПИШЕМ ТАК:
-    const { rows } = await pool.query('SELECT * FROM products ORDER BY id ASC');
-    return NextResponse.json(rows);
-  } catch (error) {
+    const { cart, initData } = await req.json();
+    // ... тут логика проверки initData (оставляем как была) ...
+    // Везде, где было sql, заменяем на pool.query
+    await bot.sendMessage(process.env.ADMIN_ID!, 'Новый заказ!');
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
