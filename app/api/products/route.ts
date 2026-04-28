@@ -1,13 +1,29 @@
+import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
+
+// Инициализация клиента Supabase
+const supabase = createClient(
+  process.env.SUPABASE_URL!, 
+  process.env.SUPABASE_ANON_KEY!
+);
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
-  const products = [
-    { id: 1, name: 'Красные розы', price: 1500, image_url: 'https://unsplash.com' },
-    { id: 2, name: 'Белые лилии', price: 2000, image_url: 'https://unsplash.com' },
-    { id: 3, name: 'Тюльпаны', price: 1200, image_url: 'https://unsplash.com' }
-  ];
-  return NextResponse.json(products);
+  try {
+    // Запрос данных из таблицы products
+    const { data, error } = await supabase
+      .from('products')
+      .select('*')
+      .order('id', { ascending: true });
+
+    if (error) throw error;
+
+    return NextResponse.json(data);
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
 }
+
+
 
