@@ -1,137 +1,84 @@
 'use client';
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 
-// Описываем интерфейсы прямо здесь, чтобы не было ошибок сборки
-interface Product {
-  id: number;
-  name: string;
-  price: number;
-  image_url: string;
-  count: number;
-}
-
-const PRODUCTS_DATA = [
-  { id: 1, name: 'Красные розы', price: 1500, image_url: 'https://unsplash.com' },
-  { id: 2, name: 'Белые лилии', price: 2000, image_url: 'https://unsplash.com' },
-  { id: 3, name: 'Нежные тюльпаны', price: 1200, image_url: 'https://unsplash.com' },
-  { id: 4, name: 'Пионы', price: 2500, image_url: 'https://unsplash.com' }
+const PRODUCTS = [
+  { id: 1, name: 'Красные розы', price: 1500, image: 'https://unsplash.com' },
+  { id: 2, name: 'Белые лилии', price: 2000, image: 'https://unsplash.com' },
+  { id: 3, name: 'Тюльпаны', price: 1200, image: 'https://unsplash.com' }
 ];
 
-export default function FlowerShop() {
-  const [cart, setCart] = useState<Product[]>([]);
+export default function Shop() {
+  const [cart, setCart] = useState<any[]>([]);
   const [address, setAddress] = useState('');
-  const [isCartOpen, setIsCartOpen] = useState(false);
-  const [isReady, setIsReady] = useState(false);
-  const tgRef = useRef<any>(null);
+  const [showCart, setShowCart] = useState(false);
 
-  useEffect(() => {
-    if (typeof window !== 'undefined' && (window as any).Telegram?.WebApp) {
-      const tg = (window as any).Telegram.WebApp;
-      tgRef.current = tg;
-      tg.ready();
-      tg.expand();
-      setIsReady(true);
-    }
-  }, []);
+  const total = cart.reduce((s, i) => s + i.price * i.count, 0);
 
-  const totalPrice = cart.reduce((sum, item) => sum + item.price * item.count, 0);
-
-  const handleCheckout = useCallback(async () => {
-    const tg = tgRef.current;
-    if (!isCartOpen) {
-      setIsCartOpen(true);
-      return;
-    }
-
-    if (!address.trim()) {
-      tg?.showAlert('Пожалуйста, введите контакты!');
-      return;
-    }
+  const checkout = useCallback(async () => {
+    const tg = (window as any).Telegram?.WebApp;
+    if (!address.trim()) return tg?.showAlert('Введите адрес!');
 
     tg?.MainButton.showProgress();
-    try {
-      const res = await fetch('/api/order', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cart, address, initData: tg?.initData }),
-      });
-
-      if (res.ok) {
-        tg?.showAlert('🌸 Заказ отправлен!');
-        setCart([]);
-        setAddress('');
-        setIsCartOpen(false);
-      }
-    } catch (e) {
-      tg?.showAlert('Ошибка сети');
-    } finally {
-      tg?.MainButton.hideProgress();
+    const res = await fetch('/api/order', {
+      method: 'POST',
+      body: JSON.stringify({ cart, address, initData: tg?.initData })
+    });
+    if (res.ok) {
+      tg?.showAlert('Заказ принят!');
+      setCart([]); setAddress(''); setShowCart(false);
+      tg?.MainButton.hide();
     }
-  }, [isCartOpen, cart, address]);
+    tg?.MainButton.hideProgress();
+  }, [cart, address]);
 
   useEffect(() => {
-    const tg = tgRef.current;
-    if (!tg || !isReady) return;
+    const tg = (window as any).Telegram?.WebApp;
+    if (!tg) return;
+    tg.ready();
+    tg.expand();
 
     if (cart.length > 0) {
       tg.MainButton.setParams({
-        text: isCartOpen ? 'ПОДТВЕРДИТЬ' : `КОРЗИНА (${totalPrice} ₽)`,
+        text: showCart ? 'ОФОРМИТЬ' : `В КОРЗИНУ (${total}₽)`,
         is_visible: true,
         color: '#2ecc71'
       });
-      tg.MainButton.onClick(handleCheckout);
+      tg.MainButton.onClick(showCart ? checkout : () => setShowCart(true));
     } else {
       tg.MainButton.hide();
     }
-
-    return () => tg.MainButton.offClick(handleCheckout);
-  }, [cart, isCartOpen, totalPrice, handleCheckout, isReady]);
-
-  const addToCart = (p: any) => {
-    setCart(prev => {
-      const exists = prev.find(i => i.id === p.id);
-      if (exists) return prev.map(i => i.id === p.id ? { ...i, count: i.count + 1 } : i);
-      return [...prev, { ...p, count: 1 }];
-    });
-  };
+    return () => tg.MainButton.offClick(checkout);
+  }, [cart, total, showCart, checkout]);
 
   return (
-    <div style={{ padding: '16px', fontFamily: 'sans-serif', backgroundColor: '#fff', minHeight: '100vh' }}>
+    <div style={{ padding: '16px', fontFamily: 'sans-serif', color: 'black' }}>
       <h2 style={{ textAlign: 'center' }}>Магазин 🌸</h2>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-        {PRODUCTS_DATA.map(p => (
-          <div key={p.id} style={{ border: '1px solid #eee', borderRadius: '12px', padding: '8px', textAlign: 'center' }}>
-            <img src={p.image_url} style={{ width: '100%', height: '100px', objectFit: 'cover', borderRadius: '8px' }} alt="" />
-            <div style={{ fontWeight: 'bold', fontSize: '14px', margin: '5px 0' }}>{p.name}</div>
-            <div style={{ color: '#2ecc71', fontSize: '14px' }}>{p.price} ₽</div>
-            <button 
-              onClick={() => addToCart(p)}
-              style={{ width: '100%', marginTop: '5px', padding: '8px', border: 'none', borderRadius: '8px', backgroundColor: '#3498db', color: '#fff' }}
-            >+ Купить</button>
+        {PRODUCTS.map(p => (
+          <div key={p.id} style={{ border: '1px solid #eee', padding: '10px', borderRadius: '12px', textAlign: 'center' }}>
+            <img src={p.image} style={{ width: '100%', height: '100px', objectFit: 'cover', borderRadius: '8px' }} />
+            <p style={{fontWeight:'bold'}}>{p.name}</p>
+            <button style={{width:'100%', padding:'8px', borderRadius:'8px', background:'#3498db', color:'white', border:'none'}} 
+              onClick={() => setCart(prev => {
+                const ex = prev.find(i => i.id === p.id);
+                return ex ? prev.map(i => i.id === p.id ? {...i, count: i.count+1} : i) : [...prev, {...p, count:1}];
+              })}> {p.price}₽ </button>
           </div>
         ))}
       </div>
 
-      {isCartOpen && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: '#fff', zIndex: 1000, padding: '20px' }}>
-          <h3>Ваш заказ:</h3>
-          {cart.map(item => (
-            <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #eee' }}>
-              <span>{item.name} x{item.count}</span>
-              <span>{item.price * item.count} ₽</span>
-            </div>
-          ))}
-          <div style={{ textAlign: 'right', fontWeight: 'bold', marginTop: '10px' }}>Итого: {totalPrice} ₽</div>
-          <textarea 
-            placeholder="Адрес и телефон"
-            value={address}
-            onChange={(e) => setAddress(e.target.value)}
-            style={{ width: '100%', height: '80px', marginTop: '15px', padding: '10px', boxSizing: 'border-box' }}
-          />
-          <button 
-            onClick={() => setIsCartOpen(false)}
-            style={{ width: '100%', marginTop: '10px', padding: '12px', backgroundColor: '#eee', border: 'none', borderRadius: '8px' }}
-          >Назад</button>
+      {showCart && (
+        <div style={{ position: 'fixed', inset: 0, background: 'white', padding: '20px', zIndex: 100 }}>
+          <h3>Корзина</h3>
+          {cart.map(i => <div key={i.id} style={{display:'flex', justifyContent:'space-between', padding:'5px 0'}}>
+            <span>{i.name} x{i.count}</span>
+            <span>{i.price * i.count}₽</span>
+          </div>)}
+          <hr />
+          <h4>Итого: {total}₽</h4>
+          <textarea placeholder="Адрес и телефон" value={address} onChange={e => setAddress(e.target.value)} 
+            style={{ width: '100%', height: '80px', margin: '10px 0', padding: '10px' }} />
+          <button onClick={() => setShowCart(false)} style={{ width: '100%', padding: '10px', background: '#eee', border: 'none', borderRadius: '8px' }}>Назад</button>
         </div>
       )}
     </div>

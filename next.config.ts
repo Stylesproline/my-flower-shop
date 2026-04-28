@@ -1,14 +1,15 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   typescript: {
-    // Игнорировать ошибки типов при сборке (для быстрого запуска)
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: true, 
   },
   eslint: {
-    // Игнорировать ошибки линтера
     ignoreDuringBuilds: true,
   },
-};
+  // Это отключит попытки сервера собрать страницу заранее без переменных окружения
+  output: 'standalone', 
+}
 
-module.exports = nextConfig;
+module.exports = nextConfig
+
 
