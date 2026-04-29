@@ -9,27 +9,19 @@ const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_AN
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    if (!body.message) return NextResponse.json({ ok: true });
+    const chatId = body.message?.chat.id || body.callback_query?.message?.chat.id;
+    const adminId = Number(process.env.ADMIN_ID);
 
-    const { id: user_id, username, first_name } = body.message.from;
-
-    // СОХРАНЯЕМ ПОЛЬЗОВАТЕЛЯ
-    await supabase.from('users').upsert({ user_id, username, first_name });
-
-    if (body.message.text === '/start') {
-      await bot.sendMessage(user_id, `Привет, ${first_name}! 🌸 Рады видеть тебя в нашем магазине.`, {
+    // 1. Команда /start
+    if (body.message?.text === '/start') {
+      await bot.sendMessage(chatId, 'Привет! Нажми на кнопку ниже, чтобы открыть магазин цветов 🌸', {
         reply_markup: {
-          inline_keyboard: [[{ text: 'Открыть магазин', web_app: { url: process.env.NEXT_PUBLIC_APP_URL || `https://${req.headers.get('host')}` } }]]
+          inline_keyboard: [[
+            { text: 'Открыть магазин', web_app: { url: process.env.NEXT_PUBLIC_APP_URL || `https://${req.headers.get('host')}` } }
+          ]]
         }
       });
     }
-
-    return NextResponse.json({ ok: true });
-  } catch (e) {
-    return NextResponse.json({ ok: true });
-  }
-}
-
 
     // 2. Команда /admin
     if (body.message?.text === '/admin' && chatId === adminId) {
