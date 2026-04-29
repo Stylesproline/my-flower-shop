@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 
 // РАСШИРЕННЫЙ СПИСОК ТОВАРОВ С КАТЕГОРИЯМИ
 const PRODUCTS = [
@@ -18,14 +18,6 @@ export default function Shop() {
   const [showCart, setShowCart] = useState(false);
   const [activeCategory, setActiveCategory] = useState('Все');
 
-  useEffect(() => {
-    const tg = (window as any).Telegram?.WebApp;
-    if (tg) {
-      tg.ready();
-      tg.expand();
-    }
-  }, []);
-
   const filteredProducts = useMemo(() => {
     return activeCategory === 'Все' 
       ? PRODUCTS 
@@ -33,6 +25,11 @@ export default function Shop() {
   }, [activeCategory]);
 
   const total = cart.reduce((s, i) => s + i.price * i.count, 0);
+
+  useEffect(() => {
+    const tg = (window as any).Telegram?.WebApp;
+    if (tg) { tg.ready(); tg.expand(); }
+  }, []);
 
   const handleAdd = (p: any) => {
     setCart(prev => {
@@ -42,37 +39,18 @@ export default function Shop() {
     });
   };
 
-  const handleCheckout = useCallback(async () => {
-    const tg = (window as any).Telegram?.WebApp;
-    
-    if (!address.trim()) {
-      tg?.showAlert('Пожалуйста, введите адрес и телефон!');
-      return;
+  const handleCheckout = async () => {
+    if (!address.trim()) return alert('Введите адрес!');
+    const res = await fetch('/api/order', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cart, address })
+    });
+    if (res.ok) {
+      alert('🌸 Заказ отправлен!');
+      setCart([]); setAddress(''); setShowCart(false);
     }
-
-    try {
-      const res = await fetch('/api/order', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          cart, 
-          address, 
-          initData: tg?.initData || "" // ПЕРЕДАЕМ ДАННЫЕ TG
-        })
-      });
-
-      if (res.ok) {
-        tg?.showAlert('🌸 Заказ успешно отправлен!');
-        setCart([]);
-        setAddress('');
-        setShowCart(false);
-      } else {
-        tg?.showAlert('Ошибка при оформлении заказа.');
-      }
-    } catch (e) {
-      tg?.showAlert('Ошибка связи с сервером.');
-    }
-  }, [cart, address]);
+  };
 
   return (
     <div style={{ 
@@ -93,7 +71,7 @@ export default function Shop() {
               color: 'var(--tg-theme-button-text-color, #fff)',
               padding: '8px 16px', borderRadius: '20px', fontWeight: 'bold', fontSize: '14px', cursor: 'pointer'
             }}>
-              🛒 {cart.reduce((a,b) => a + b.count, 0)}
+              📦 {cart.length}
             </div>
           )}
         </div>
@@ -128,7 +106,7 @@ export default function Shop() {
               <span style={{ fontWeight: '800', color: 'var(--tg-theme-link-color, #34c759)' }}>{p.price}₽</span>
               <button onClick={() => handleAdd(p)} style={{ 
                 background: 'var(--tg-theme-button-color, #007aff)', border: 'none', width: '32px', height: '32px',
-                borderRadius: '50%', color: '#fff', fontSize: '18px', fontWeight: 'bold', cursor: 'pointer'
+                borderRadius: '50%', color: '#fff', fontSize: '18px', fontWeight: 'bold'
               }}>+</button>
             </div>
           </div>
@@ -139,9 +117,9 @@ export default function Shop() {
       {showCart && (
         <div style={{ 
           position: 'fixed', inset: 0, zIndex: 100, background: 'var(--tg-theme-bg-color, #fff)',
-          padding: '24px', display: 'flex', flexDirection: 'column'
+          padding: '24px', display: 'flex', flexDirection: 'column', animation: 'slideUp 0.3s ease'
         }}>
-          <h3 style={{ fontSize: '28px', fontWeight: '800' }}>Ваш заказ</h3>
+          <h3 style={{ fontSize: '28px', fontWeight: '800' }}>Заказ</h3>
           <div style={{ flex: 1, overflowY: 'auto', marginTop: '15px' }}>
             {cart.map(i => (
               <div key={i.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '15px 0', borderBottom: '1px solid #e5e5ea' }}>
@@ -150,33 +128,30 @@ export default function Shop() {
               </div>
             ))}
             <div style={{ textAlign: 'right', marginTop: '20px', fontSize: '22px', fontWeight: '800' }}>Итого: {total}₽</div>
-            
-            <p style={{ marginTop: '20px', fontWeight: '600' }}>Куда доставить?</p>
             <textarea 
               placeholder="Адрес и телефон для связи" 
               value={address} 
               onChange={e => setAddress(e.target.value)} 
               style={{ 
-                width: '100%', height: '100px', padding: '15px', marginTop: '10px',
+                width: '100%', height: '100px', padding: '15px', marginTop: '20px',
                 borderRadius: '18px', border: '1px solid #d1d1d6', boxSizing: 'border-box',
                 background: 'var(--tg-theme-secondary-bg-color, #f2f2f7)',
                 color: 'var(--tg-theme-text-color, #000)', fontSize: '16px'
               }} 
             />
           </div>
-          
           <button onClick={handleCheckout} style={{ 
             width: '100%', padding: '18px', background: 'var(--tg-theme-button-color, #34c759)', 
-            color: '#fff', border: 'none', borderRadius: '20px', fontWeight: '800', fontSize: '18px', cursor: 'pointer'
-          }}>ОФОРМИТЬ ЗАКАЗ</button>
-          
+            color: '#fff', border: 'none', borderRadius: '20px', fontWeight: '800', fontSize: '18px'
+          }}>ОФОРМИТЬ</button>
           <button onClick={() => setShowCart(false)} style={{ 
             width: '100%', padding: '12px', marginTop: '10px', background: 'transparent', 
-            color: 'var(--tg-theme-link-color, #007aff)', border: 'none', fontWeight: '700', cursor: 'pointer'
-          }}>Назад к цветам</button>
+            color: 'var(--tg-theme-link-color, #007aff)', border: 'none', fontWeight: '700'
+          }}>Назад</button>
         </div>
       )}
     </div>
   );
 }
+
 
