@@ -10,39 +10,48 @@ export async function POST(req: Request) {
   try {
     const { cart, address, initData } = await req.json();
     
-    // 1. Извлекаем данные пользователя из initData
-    const urlParams = new URLSearchParams(initData);
-    const userRaw = urlParams.get('user');
-    const user = userRaw ? JSON.parse(userRaw) : {};
-    
-    // Формируем имя для уведомления: приоритет username, если нет — имя и фамилия
-    const clientName = user.username 
-      ? `@${user.username}` 
-      : `${user.first_name || 'Неизвестный'} ${user.last_name || ''}`.trim();
+    // НАДЕЖНЫЙ ПАРСИНГ ПОЛЬЗОВАТЕЛЯ
+    let userData: any = {};
+    try {
+      const urlParams = new URLSearchParams(initData);
+      const userString = urlParams.get('user');
+      if (userString) {
+        userData = JSON.parse(decodeURIComponent(userString));
+      }
+    } catch (e) {
+      console.error('Ошибка парсинга юзера:', e);
+    }
 
-    const total = cart.reduce((s: number, i: any) => s + i.price * i.count, 0);
+    const userId = userData.id || 'Неизвестен';
+    const clientName = userData.username 
+      ? `@${userData.username}` 
+      : `${userData.first_name || 'Инкогнито'} ${userData.last_name || ''}`.trim();
 
-    // 2. СОХРАНЯЕМ ЗАКАЗ В БД
-    await supabase.from('orders').insert({
-      user_id: user.id,
-      items: cart,
-      total_price: total,
-      address: address
-    });
+    const total = cart.reduce((s: number, i: any) => s + (i.price * i.count), 0);
 
-    // 3. УВЕДОМЛЕНИЕ АДМИНУ
+    // СОХРАНЯЕМ В БД (используем Optional Chaining для защиты)
+    if (userData.id) {
+      await supabase.from('orders').insert({
+        user_id: userData.id,
+        items: cart,
+        total_price: total,
+        address: address
+      });
+    }
+
+    // УВЕДОМЛЕНИЕ
     const itemsText = cart.map((i: any) => `• ${i.name} x${i.count}`).join('\n');
     const msg = `🌸 *НОВЫЙ ЗАКАЗ*\n\n` +
-                `👤 *Клиент:* ${clientName} (ID: ${user.id})\n` +
+                `👤 *Клиент:* ${clientName}\n` +
+                `🆔 *ID:* \`${userId}\`\n` +
                 `🏠 *Адрес:* ${address}\n\n` +
                 `📦 *Товары:*\n${itemsText}\n\n` +
-                `💰 *Итого: ${total} ₽*`;
+                `💰 *ИТОГО: ${total} ₽*`;
     
     await bot.sendMessage(process.env.ADMIN_ID!, msg, { parse_mode: 'Markdown' });
 
     return NextResponse.json({ success: true });
   } catch (err: any) {
-    console.error('Order Error:', err.message);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
