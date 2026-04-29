@@ -1,33 +1,35 @@
 import { NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
 // @ts-ignore
 import TelegramBot from 'node-telegram-bot-api';
 
-// Используем глобальную переменную, чтобы не инициализировать бота каждый раз
-const token = process.env.BOT_TOKEN || '';
-const bot = new TelegramBot(token);
+const bot = new TelegramBot(process.env.BOT_TOKEN!);
+const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!);
 
 export async function POST(req: Request) {
   try {
-    const { cart, address } = await req.json();
+    const { cart, address, initData } = await req.json();
+    const urlParams = new URLSearchParams(initData);
+    const user = JSON.parse(urlParams.get('user') || '{}');
+    const total = cart.reduce((s: number, i: any) => s + i.price * i.count, 0);
+
+    // СОХРАНЯЕМ ЗАКАЗ В БД
+    await supabase.from('orders').insert({
+      user_id: user.id,
+      items: cart,
+      total_price: total,
+      address: address
+    });
+
+    // УВЕДОМЛЕНИЕ АДМИНУ
+    const itemsText = cart.map((i: any) => `• ${i.name} x${i.count}`).join('\n');
+    const msg = `🌸 НОВЫЙ ЗАКАЗ\n👤 Клиент: @${user.username || 'user'}\n🏠 Адрес: ${address}\n📦 Товары:\n${itemsText}\n💰 Итого: ${total} ₽`;
     
-    if (!cart || !address) {
-      return NextResponse.json({ error: 'Missing data' }, { status: 400 });
-    }
+    await bot.sendMessage(process.env.ADMIN_ID!, msg);
 
-    const items = cart.map((i: any) => `${i.name} x${i.count}`).join('\n');
-    const total = cart.reduce((s: number, i: any) => s + (i.price * i.count), 0);
-    const adminId = process.env.ADMIN_ID;
-
-    const message = `🌸 *НОВЫЙ ЗАКАЗ*\n\n🏠 *Адрес:* ${address}\n\n📦 *Товары:*\n${items}\n\n💰 *Сумма:* ${total} ₽`;
-
-    if (adminId) {
-      await bot.sendMessage(adminId, message, { parse_mode: 'Markdown' });
-    }
-
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ success: true });
   } catch (err: any) {
-    console.error('Order error:', err.message);
-    return NextResponse.json({ error: 'Server error' }, { status: 500 });
+    return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
 
