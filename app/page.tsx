@@ -1,7 +1,6 @@
 'use client';
 import { useEffect, useState, useMemo } from 'react';
 
-// РАСШИРЕННЫЙ СПИСОК ТОВАРОВ С КАТЕГОРИЯМИ
 const PRODUCTS = [
   { id: 1, category: 'Розы', name: 'Красный Наоми', price: 150, desc: '11 роз с крупным бутоном', image: 'https://cdn4.telesco.pe/file/SrJ6ug-hc-RzwCajRdAXB-6NWF2liB_0wPi3DDgDEnxBbpXrU6pJNepFGmdlK12OHAHwuJR_X86xTUOq4a_sUIiA98RhvrxRjUNxLZtHelKDUzjcu6T99_zQ-QTH4lIHre7_xuBX9D_9U7lbvG1xInOX-Ua38LFIqCK7K0XjfRrgdZHFPaqeXg8jVKDrLJnfxubMzOHbLtd4bL8fbAIhzJHLHvp9kHIFXuOusNdX5dx4PJQ9e95NFZHQ8uGvM0YclCrkrp_uC_aKA1ILLEUPDsTvLE2gxcMiimrxlJ49Wg8_x6Kt2JTitdR5jBpLFtWX1OcFMEPOiH-doD1ElkqjLg.jpg' },
   { id: 2, category: 'Лилии', name: 'Желтая Азия', price: 210, desc: 'Нежный аромат и стойкость до 2 недель', image: 'https://cdn4.telesco.pe/file/X0zdaAeToHxbGWma1G0xpWJkFyxVSkJ8PJdXweZYytXOvWw40vQEyoFYTsj7Hpw0KxIy3yULzWB8xs5hZr5Vv6OGAW6jdMTkgBj_FwyvpuNqAbBGPTdfn2Y8ysW89-r26s9w4SbRKuANXWMzJYCPBp6yU1AsF63IdcCi7UUFOgHQFPlmTEiA8UmO5BTWmPQDq-Mmmk8QNIeU_yOXB-GOLw2NSbkZNdHK_ZVf0BDJZuCetgXu3xVqlmz5NdCJfPVSRZMiXCwxCgoll2cYFdar-PHKzBqutPIEjMxGTJZ3FtntCJgf5w0-G7YHdbijygbUhXNemywiYyHqQ11jz0O0tA.jpg' },
@@ -17,6 +16,10 @@ export default function Shop() {
   const [address, setAddress] = useState('');
   const [showCart, setShowCart] = useState(false);
   const [activeCategory, setActiveCategory] = useState('Все');
+  
+  // 🔥 ЕДИНСТВЕННОЕ НОВОЕ: статус инициализации
+  const [tgStatus, setTgStatus] = useState<'loading' | 'ok' | 'error'>('loading');
+  const [tgRaw, setTgRaw] = useState('');
 
   const filteredProducts = useMemo(() => {
     return activeCategory === 'Все' 
@@ -28,7 +31,18 @@ export default function Shop() {
 
   useEffect(() => {
     const tg = (window as any).Telegram?.WebApp;
-    if (tg) { tg.ready(); tg.expand(); }
+    
+    if (!tg) {
+      setTgStatus('error');
+      setTgRaw('Telegram.WebApp not found');
+      return;
+    }
+    
+    tg.ready();
+    tg.expand();
+    
+    setTgStatus('ok');
+    setTgRaw(tg.initData?.substring(0, 100) || 'initData empty');
   }, []);
 
   const handleAdd = (p: any) => {
@@ -39,50 +53,50 @@ export default function Shop() {
     });
   };
 
-const handleCheckout = async () => {
-  const tg = (window as any).Telegram?.WebApp;
-  const initData = tg?.initData || "";
-
-  // 👇 НАДЁЖНОЕ ИЗВЛЕЧЕНИЕ ИМЕНИ (обходит баг с initDataUnsafe)
-  let tgUser = { username: '', first_name: 'Клиент' };
-  try {
+  const handleCheckout = async () => {
+    const tg = (window as any).Telegram?.WebApp;
+    
+    // 🔥 Если tg нет — сразу показываем ошибку
+    if (!tg) {
+      alert('❌ Запустите через Telegram: @YourBot → Menu');
+      return;
+    }
+    
+    const initData = tg.initData || "";
     const params = new URLSearchParams(initData);
     const userJson = params.get('user');
-    if (userJson) tgUser = JSON.parse(decodeURIComponent(userJson));
-  } catch (e) {}
+    
+    let username = '❌ НЕТ ДАННЫХ';
+    if (userJson) {
+      try {
+        const user = JSON.parse(decodeURIComponent(userJson));
+        username = `@${user.username || 'no-username'} | ${user.first_name} (ID:${user.id})`;
+      } catch (e) {
+        username = `❌ Parse error: ${e}`;
+      }
+    }
 
-  const senderName = tgUser.username || tgUser.first_name || 'Клиент';
+    // 🔥 Показываем результат парсинга
+    tg.showAlert(`🔍 DEBUG:\n${username}`);
 
-  if (!address.trim()) {
-    tg?.showAlert?.('Введите адрес!') || alert('Введите адрес!');
-    return;
-  }
+    if (!address.trim()) {
+      tg.showAlert('Введите адрес!');
+      return;
+    }
 
-  const res = await fetch('/api/order', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ 
-      cart, 
-      address, 
-      username: senderName, // 👈 Точно придёт реальное имя/ник
-      initData
-    })
-  });
-
-  // ... дальше ваш код без изменений
+    const res = await fetch('/api/order', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cart, address, username, initData })
+    });
 
     if (res.ok) {
-      if (tg?.showAlert) {
-        tg.showAlert('🌸 Заказ отправлен!');
-      } else {
-        alert('🌸 Заказ отправлен!');
-      }
+      tg.showAlert('🌸 Заказ отправлен!');
       setCart([]);
       setAddress('');
       setShowCart(false);
     }
   };
-
 
   return (
     <div style={{ 
@@ -93,8 +107,30 @@ const handleCheckout = async () => {
       fontFamily: '-apple-system, system-ui, sans-serif'
     }}>
       
-      {/* СТИЛЬНЫЙ HEADER */}
-      <header style={{ position: 'sticky', top: 0, zIndex: 10, background: 'var(--tg-theme-bg-color, #f5f5f7)', padding: '16px 0' }}>
+      {/* 🔥 BIG DEBUG BANNER — виден всегда */}
+      <div style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        padding: '12px 16px',
+        background: tgStatus === 'error' ? '#ff4444' : tgStatus === 'ok' ? '#00c853' : '#ffab00',
+        color: '#fff',
+        fontWeight: 'bold',
+        fontSize: '14px',
+        zIndex: 9999,
+        textAlign: 'center',
+        boxShadow: '0 2px 10px rgba(0,0,0,0.2)'
+      }}>
+        {tgStatus === 'loading' && '⏳ Загрузка Telegram...'}
+        {tgStatus === 'error' && '❌ Telegram.WebApp НЕ найден! Запустите через @ВашБот → Menu'}
+        {tgStatus === 'ok' && `✅ Telegram OK | initData: ${tgRaw.substring(0, 40)}...`}
+      </div>
+
+      {/* Сдвиг контента вниз, чтобы не перекрывал баннер */}
+      <div style={{ paddingTop: '50px' }}>
+      
+      <header style={{ position: 'sticky', top: 50, zIndex: 10, background: 'var(--tg-theme-bg-color, #f5f5f7)', padding: '16px 0' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h2 style={{ fontSize: '26px', fontWeight: '800' }}>Магазин 🌸</h2>
           {cart.length > 0 && (
@@ -108,7 +144,6 @@ const handleCheckout = async () => {
           )}
         </div>
 
-        {/* КАТЕГОРИИ */}
         <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', marginTop: '16px', paddingBottom: '4px' }}>
           {CATEGORIES.map(cat => (
             <button key={cat} onClick={() => setActiveCategory(cat)} style={{
@@ -123,7 +158,6 @@ const handleCheckout = async () => {
         </div>
       </header>
 
-      {/* СЕТКА ТОВАРОВ */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '10px' }}>
         {filteredProducts.map(p => (
           <div key={p.id} style={{ 
@@ -145,7 +179,6 @@ const handleCheckout = async () => {
         ))}
       </div>
 
-      {/* МОДАЛЬНОЕ ОКНО КОРЗИНЫ */}
       {showCart && (
         <div style={{ 
           position: 'fixed', inset: 0, zIndex: 100, background: 'var(--tg-theme-bg-color, #fff)',
@@ -182,8 +215,8 @@ const handleCheckout = async () => {
           }}>Назад</button>
         </div>
       )}
+      
+      </div> {/* конец сдвига контента */}
     </div>
   );
 }
-
-
