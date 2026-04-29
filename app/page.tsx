@@ -39,41 +39,46 @@ export default function Shop() {
     });
   };
 
-const handleCheckout = async () => {
-  // 1. Прямая проверка объекта Telegram
-  const tg = (window as any).Telegram?.WebApp;
-  
-  if (!address.trim()) {
-    return tg ? tg.showAlert('Введите адрес!') : alert('Введите адрес!');
-  }
+  const handleCheckout = async () => {
+    // Получаем объект WebApp прямо в момент клика
+    const tg = (window as any).Telegram?.WebApp;
+    const initData = tg?.initData || "";
 
-  // 2. Проверяем, есть ли данные пользователя
-  if (!tg?.initData) {
-    console.error("Данные Telegram WebApp не найдены!");
-    // Если мы в браузере, а не в TG, initData будет пустым
-  }
-
-  const res = await fetch('/api/order', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ 
-      cart, 
-      address, 
-      initData: tg?.initData || "" // ВОТ ЭТА СТРОКА КРИТИЧЕСКИ ВАЖНА
-    })
-  });
-
-  if (res.ok) {
-    if (tg) {
-      tg.showAlert('🌸 Заказ отправлен!');
-    } else {
-      alert('🌸 Заказ отправлен!');
+    if (!address.trim()) {
+      if (tg?.showAlert) {
+        tg.showAlert('Введите адрес!');
+      } else {
+        alert('Введите адрес!');
+      }
+      return;
     }
-    setCart([]);
-    setAddress('');
-    setShowCart(false);
-  }
-};
+
+    // Если мы не в Telegram, предупреждаем в консоли
+    if (!initData) {
+      console.warn("Внимание: initData пуст. Имя пользователя не будет определено.");
+    }
+
+    const res = await fetch('/api/order', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        cart, 
+        address, 
+        initData: initData // Передаем строку данных серверу
+      })
+    });
+
+    if (res.ok) {
+      if (tg?.showAlert) {
+        tg.showAlert('🌸 Заказ отправлен!');
+      } else {
+        alert('🌸 Заказ отправлен!');
+      }
+      setCart([]);
+      setAddress('');
+      setShowCart(false);
+    }
+  };
 
 
   return (
