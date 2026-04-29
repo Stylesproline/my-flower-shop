@@ -84,14 +84,18 @@ const handleCheckout = async () => {
   };
 
 
-return (
-  <div style={{ padding: '16px', background: 'white', color: 'black' }}>
-    {/* ЭТОТ БЛОК ПОКАЖЕТ ОШИБКУ ПРЯМО В ТЕЛЕГРАМ */}
-    <div style={{ background: '#ffeded', padding: '10px', fontSize: '10px', border: '1px solid red', marginBottom: '10px', wordBreak: 'break-all' }}>
-      <b>DEBUG INFO:</b><br/>
-      InitData присутствует: {typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initData ? '✅ ДА' : '❌ НЕТ'}<br/>
-      Raw: {(window as any).Telegram?.WebApp?.initData?.slice(0, 40) || 'пусто'}...
-    </div>
+  return (
+    <div style={{ 
+      padding: '0 16px 120px', 
+      background: 'var(--tg-theme-bg-color, #f5f5f7)', 
+      color: 'var(--tg-theme-text-color, #000)',
+      minHeight: '100vh',
+      fontFamily: '-apple-system, system-ui, sans-serif'
+    }}>
+      
+      {/* СТИЛЬНЫЙ HEADER */}
+      <header style={{ position: 'sticky', top: 0, zIndex: 10, background: 'var(--tg-theme-bg-color, #f5f5f7)', padding: '16px 0' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h2 style={{ fontSize: '26px', fontWeight: '800' }}>Магазин 🌸</h2>
           {cart.length > 0 && (
             <div onClick={() => setShowCart(true)} style={{ 
