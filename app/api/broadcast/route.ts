@@ -8,43 +8,47 @@ const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_AN
 
 export async function POST(req: Request) {
   try {
-    const { message, secret } = await req.json();
+    const { message, image, secret } = await req.json();
 
-    // ЗАЩИТА: Чтобы рассылку не запустил кто-то чужой
-    // Мы проверяем, что в поле secret пришел твой ADMIN_ID
     if (!secret || String(secret) !== String(process.env.ADMIN_ID)) {
       return NextResponse.json({ error: 'Доступ запрещен' }, { status: 403 });
     }
 
-    // 1. Получаем список всех ID из базы данных
-    const { data: users, error } = await supabase
-      .from('users')
-      .select('user_id');
+    const { data: users } = await supabase.from('users').select('user_id');
+    if (!users) return NextResponse.json({ error: 'База пуста' });
 
-    if (error || !users) {
-      return NextResponse.json({ error: 'Ошибка получения базы пользователей' }, { status: 500 });
-    }
-
-    // 2. Цикл рассылки
     let successCount = 0;
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || `https://${req.headers.get('host')}`;
+
     for (const user of users) {
       try {
-        await bot.sendMessage(user.user_id, message, { parse_mode: 'Markdown' });
+        const options = {
+          parse_mode: 'Markdown' as const,
+          reply_markup: {
+            inline_keyboard: [[
+              { text: '🌸 Перейти в магазин', web_app: { url: appUrl } }
+            ]]
+          }
+        };
+
+        if (image) {
+          // Если есть картинка, шлем фото с подписью
+          await bot.sendPhoto(user.user_id, image, { ...options, caption: message });
+        } else {
+          // Если нет — просто текст
+          await bot.sendMessage(user.user_id, message, options);
+        }
+
         successCount++;
-        // Небольшая пауза, чтобы Telegram не забанил за спам (30 сообщений в секунду - лимит)
-        await new Promise(resolve => setTimeout(resolve, 50)); 
+        await new Promise(r => setTimeout(r, 50)); 
       } catch (e) {
-        console.log(`Не удалось отправить пользователю ${user.user_id}`);
+        console.log(`Ошибка на ID ${user.user_id}`);
       }
     }
 
-    return NextResponse.json({ 
-      success: true, 
-      sent: successCount, 
-      total: users.length 
-    });
-
+    return NextResponse.json({ success: true, sent: successCount });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
+
