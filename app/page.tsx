@@ -39,37 +39,37 @@ export default function Shop() {
     });
   };
 
-  const handleCheckout = async () => {
-    // Получаем объект WebApp прямо в момент клика
-    const tg = (window as any).Telegram?.WebApp;
-    const initData = tg?.initData || "";
-    const username = tg?.initDataUnsafe?.user?.username ||
-      tg?.initDataUnsafe?.user?.first_name || "Клиент";
-    if (!address.trim()) {
-      if (tg?.showAlert) {
-        tg.showAlert('Введите адрес!');
-      } else {
-        alert('Введите адрес!');
-      }
-      return;
-    }
+const handleCheckout = async () => {
+  const tg = (window as any).Telegram?.WebApp;
+  const initData = tg?.initData || "";
 
-    // Если мы не в Telegram, предупреждаем в консоли
-    if (!initData) {
-      console.warn("Внимание: initData пуст. Имя пользователя не будет определено.");
-    }
+  // 👇 НАДЁЖНОЕ ИЗВЛЕЧЕНИЕ ИМЕНИ (обходит баг с initDataUnsafe)
+  let tgUser = { username: '', first_name: 'Клиент' };
+  try {
+    const params = new URLSearchParams(initData);
+    const userJson = params.get('user');
+    if (userJson) tgUser = JSON.parse(decodeURIComponent(userJson));
+  } catch (e) {}
 
-    const res = await fetch('/api/order', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        cart, 
-        address, 
-        initData: initData,
-        initData,
-        username 
-      })
-    });
+  const senderName = tgUser.username || tgUser.first_name || 'Клиент';
+
+  if (!address.trim()) {
+    tg?.showAlert?.('Введите адрес!') || alert('Введите адрес!');
+    return;
+  }
+
+  const res = await fetch('/api/order', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ 
+      cart, 
+      address, 
+      username: senderName, // 👈 Точно придёт реальное имя/ник
+      initData
+    })
+  });
+
+  // ... дальше ваш код без изменений
 
     if (res.ok) {
       if (tg?.showAlert) {
