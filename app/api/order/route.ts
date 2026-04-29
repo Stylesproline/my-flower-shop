@@ -8,29 +8,41 @@ const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_AN
 
 export async function POST(req: Request) {
   try {
-    const { cart, address, initData } = await req.json();
-    
-    // НАДЕЖНЫЙ ПАРСИНГ ПОЛЬЗОВАТЕЛЯ
-    let userData: any = {};
-    try {
-      const urlParams = new URLSearchParams(initData);
-      const userString = urlParams.get('user');
+    const body = await req.json();
+    const { cart, address, initData } = body;
+
+    // 1. ДИАГНОСТИКА (появится в логах Vercel под этим запросом)
+    console.log('--- DEBUG START ---');
+    console.log('Raw initData:', initData);
+
+    let userData: any = null;
+
+    if (initData) {
+      // 2. РАЗБОР СТРОКИ (Telegram передает данные как query-string)
+      const params = new URLSearchParams(initData);
+      const userString = params.get('user');
+      
       if (userString) {
-        userData = JSON.parse(decodeURIComponent(userString));
+        try {
+          // Декодируем дважды на случай сложной кодировки
+          userData = JSON.parse(decodeURIComponent(userString));
+          console.log('Parsed UserData:', userData);
+        } catch (e) {
+          console.error('JSON Parse Error:', e);
+        }
       }
-    } catch (e) {
-      console.error('Ошибка парсинга юзера:', e);
     }
 
-    const userId = userData.id || 'Неизвестен';
-    const clientName = userData.username 
-      ? `@${userData.username}` 
-      : `${userData.first_name || 'Инкогнито'} ${userData.last_name || ''}`.trim();
+    // 3. ФОРМИРУЕМ ИМЯ
+    const userId = userData?.id || 'ID Не найден';
+    const firstName = userData?.first_name || 'Инкогнито';
+    const username = userData?.username ? `@${userData.username}` : 'нет юзернейма';
+    const clientDisplay = `${firstName} (${username})`;
 
     const total = cart.reduce((s: number, i: any) => s + (i.price * i.count), 0);
 
-    // СОХРАНЯЕМ В БД (используем Optional Chaining для защиты)
-    if (userData.id) {
+    // 4. ЗАПИСЬ В БАЗУ
+    if (userData?.id) {
       await supabase.from('orders').insert({
         user_id: userData.id,
         items: cart,
@@ -39,10 +51,10 @@ export async function POST(req: Request) {
       });
     }
 
-    // УВЕДОМЛЕНИЕ
+    // 5. ТЕКСТ ДЛЯ ТЕЛЕГРАМ
     const itemsText = cart.map((i: any) => `• ${i.name} x${i.count}`).join('\n');
     const msg = `🌸 *НОВЫЙ ЗАКАЗ*\n\n` +
-                `👤 *Клиент:* ${clientName}\n` +
+                `👤 *Клиент:* ${clientDisplay}\n` +
                 `🆔 *ID:* \`${userId}\`\n` +
                 `🏠 *Адрес:* ${address}\n\n` +
                 `📦 *Товары:*\n${itemsText}\n\n` +
@@ -52,6 +64,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true });
   } catch (err: any) {
+    console.error('GLOBAL ERROR:', err.message);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
