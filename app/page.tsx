@@ -39,18 +39,42 @@ export default function Shop() {
     });
   };
 
-  const handleCheckout = async () => {
-    if (!address.trim()) return alert('Введите адрес!');
-    const res = await fetch('/api/order', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ cart, address })
-    });
-    if (res.ok) {
+const handleCheckout = async () => {
+  // 1. Прямая проверка объекта Telegram
+  const tg = (window as any).Telegram?.WebApp;
+  
+  if (!address.trim()) {
+    return tg ? tg.showAlert('Введите адрес!') : alert('Введите адрес!');
+  }
+
+  // 2. Проверяем, есть ли данные пользователя
+  if (!tg?.initData) {
+    console.error("Данные Telegram WebApp не найдены!");
+    // Если мы в браузере, а не в TG, initData будет пустым
+  }
+
+  const res = await fetch('/api/order', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ 
+      cart, 
+      address, 
+      initData: tg?.initData || "" // ВОТ ЭТА СТРОКА КРИТИЧЕСКИ ВАЖНА
+    })
+  });
+
+  if (res.ok) {
+    if (tg) {
+      tg.showAlert('🌸 Заказ отправлен!');
+    } else {
       alert('🌸 Заказ отправлен!');
-      setCart([]); setAddress(''); setShowCart(false);
     }
-  };
+    setCart([]);
+    setAddress('');
+    setShowCart(false);
+  }
+};
+
 
   return (
     <div style={{ 
