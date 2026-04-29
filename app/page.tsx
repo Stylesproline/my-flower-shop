@@ -2,11 +2,11 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
 
 const PRODUCTS = [
-  { id: 1, category: 'Розы', name: 'Красный Наоми', price: 150, desc: '11 роз с крупным бутоном', image: 'https://telesco.pe' },
-  { id: 2, category: 'Лилии', name: 'Желтая Азия', price: 210, desc: 'Нежный аромат и стойкость до 2 недель', image: 'https://telesco.pe' },
-  { id: 3, category: 'Букеты', name: 'Гортензия Микс', price: 72, desc: 'Объемный букет для особого случая', image: 'https://telesco.pe' },
-  { id: 4, category: 'Розы', name: 'Белый Шоколад', price: 170, desc: 'Белоснежные розы высшего сорта', image: 'https://telesco.pe' },
-  { id: 5, category: 'Букеты', name: 'Полевой сон', price: 120, desc: 'Ромашки и сухоцветы в крафте', image: 'https://telesco.pe' },
+  { id: 1, category: 'Розы', name: 'Красный Наоми', price: 150, desc: '11 роз с крупным бутоном', image: 'https://cdn4.telesco.pe/file/SrJ6ug-hc-RzwCajRdAXB-6NWF2liB_0wPi3DDgDEnxBbpXrU6pJNepFGmdlK12OHAHwuJR_X86xTUOq4a_sUIiA98RhvrxRjUNxLZtHelKDUzjcu6T99_zQ-QTH4lIHre7_xuBX9D_9U7lbvG1xInOX-Ua38LFIqCK7K0XjfRrgdZHFPaqeXg8jVKDrLJnfxubMzOHbLtd4bL8fbAIhzJHLHvp9kHIFXuOusNdX5dx4PJQ9e95NFZHQ8uGvM0YclCrkrp_uC_aKA1ILLEUPDsTvLE2gxcMiimrxlJ49Wg8_x6Kt2JTitdR5jBpLFtWX1OcFMEPOiH-doD1ElkqjLg.jpg' },
+  { id: 2, category: 'Лилии', name: 'Желтая Азия', price: 210, desc: 'Нежный аромат и стойкость до 2 недель', image: 'https://cdn4.telesco.pe/file/X0zdaAeToHxbGWma1G0xpWJkFyxVSkJ8PJdXweZYytXOvWw40vQEyoFYTsj7Hpw0KxIy3yULzWB8xs5hZr5Vv6OGAW6jdMTkgBj_FwyvpuNqAbBGPTdfn2Y8ysW89-r26s9w4SbRKuANXWMzJYCPBp6yU1AsF63IdcCi7UUFOgHQFPlmTEiA8UmO5BTWmPQDq-Mmmk8QNIeU_yOXB-GOLw2NSbkZNdHK_ZVf0BDJZuCetgXu3xVqlmz5NdCJfPVSRZMiXCwxCgoll2cYFdar-PHKzBqutPIEjMxGTJZ3FtntCJgf5w0-G7YHdbijygbUhXNemywiYyHqQ11jz0O0tA.jpg' },
+  { id: 3, category: 'Букеты', name: 'Гортензия Микс', price: 72, desc: 'Объемный букет для особого случая', image: 'https://cdn4.telesco.pe/file/JnBnBHTQIbGeat3jbRBzBXuHjcG01v_pfcHD6k3-PGOn3XaB1ZYnWEwLVz0_zergwNujdKrcvwRN4gPlLylzQc-MESjydBI0EgbbylJ64hGu5zF0w3CHVth84R3A-BhdUSf1OVjyuRCV_zNynugxC24RCJ29mTaKmtpODLwmtrHyU_1zxS_1dtMg43qZERyT4IQApfH_op4fXUT2Kbfe5lfILBFyUL-pnkxTpbJpCHmh_yDbM20eO1x8L7wC1chEio_XjqXvucwGGVkCF1WMgGGqCSoO-YezOiUhfjRIPfCKOXUdKLZWSKC9cgADO1Y7VIRwYM9uchqS0zDLxj83rw.jpg' },
+  { id: 4, category: 'Розы', name: 'Белый Шоколад', price: 170, desc: 'Белоснежные розы высшего сорта', image: 'https://cdn4.telesco.pe/file/pbMk4ZbyAIaVj2dNSUg2H2zctzLTIHHcSbGWqbITIMqUjc7_5EGt-GQvywVor-c00ZHJjz03Rkbcvjhaj3ehpzcPW-yjiBRQAh49SY_XbnJruNEHRHdsTDbp_A41cL3dsLxgYeCWVusott1gKXrPmxS71S1I4hCJ_ljWOB4gPNThInD7qaxb--cgA32sWswnJ8sSrQ16RH4_PNFGBY33WWfuIQl6pn05oBqnby_ckYrcSi3iEoMJUeRXhYIM5Kanc4mULxj_mVlymBQ87KoIyEcToswJgmhbuGLt51W2gZvP-s5e-zo_1onefMxWTsvf3jvmAvUq7QHMnb3sv1KPZQ.jpg' },
+  { id: 5, category: 'Букеты', name: 'Полевой сон', price: 120, desc: 'Ромашки и сухоцветы в крафте', image: 'https://cdn4.telesco.pe/file/akqi47LPnkxhNLYl1gLp2uzTBfHwWFxVMGHW4L_4CUxVnhqSgEUbkP1-Yb4JofHb1HkbrTOQT3X-NkQh-ilF-heNq-sVyhIh0rKYuzDxvohpmH-2SN7A3jBmDlqIni_rhpDbGtApoZkoJpZwJP1L6qeRW9JlvA6iyLdlPagZC_130IePAltg6ddA70v0sZNhl0b-G7KxK1Snm1uAIyFRVA2q7sG28WzjsgLMpNKVrrV5qDBbN4iNBT0rXuN3ubiy0KH6hEbiNpTZpg4yKY3ZXDYYU9DbiAj1XH3BycCXbYwSwPWcDK6T2nXjeD22yqVBII1mWMtnHNyhTVV7prxgZg.jpg' },
 ];
 
 const CATEGORIES = ['Все', 'Розы', 'Лилии', 'Букеты'];
