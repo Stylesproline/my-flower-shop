@@ -1,7 +1,6 @@
 'use client';
 import { useEffect, useState, useMemo } from 'react';
 
-// РАСШИРЕННЫЙ СПИСОК ТОВАРОВ С КАТЕГОРИЯМИ
 const PRODUCTS = [
   { id: 1, category: 'Розы', name: 'Красный Наоми', price: 150, desc: '11 роз с крупным бутоном', image: 'https://cdn4.telesco.pe/file/SrJ6ug-hc-RzwCajRdAXB-6NWF2liB_0wPi3DDgDEnxBbpXrU6pJNepFGmdlK12OHAHwuJR_X86xTUOq4a_sUIiA98RhvrxRjUNxLZtHelKDUzjcu6T99_zQ-QTH4lIHre7_xuBX9D_9U7lbvG1xInOX-Ua38LFIqCK7K0XjfRrgdZHFPaqeXg8jVKDrLJnfxubMzOHbLtd4bL8fbAIhzJHLHvp9kHIFXuOusNdX5dx4PJQ9e95NFZHQ8uGvM0YclCrkrp_uC_aKA1ILLEUPDsTvLE2gxcMiimrxlJ49Wg8_x6Kt2JTitdR5jBpLFtWX1OcFMEPOiH-doD1ElkqjLg.jpg' },
   { id: 2, category: 'Лилии', name: 'Желтая Азия', price: 210, desc: 'Нежный аромат и стойкость до 2 недель', image: 'https://cdn4.telesco.pe/file/X0zdaAeToHxbGWma1G0xpWJkFyxVSkJ8PJdXweZYytXOvWw40vQEyoFYTsj7Hpw0KxIy3yULzWB8xs5hZr5Vv6OGAW6jdMTkgBj_FwyvpuNqAbBGPTdfn2Y8ysW89-r26s9w4SbRKuANXWMzJYCPBp6yU1AsF63IdcCi7UUFOgHQFPlmTEiA8UmO5BTWmPQDq-Mmmk8QNIeU_yOXB-GOLw2NSbkZNdHK_ZVf0BDJZuCetgXu3xVqlmz5NdCJfPVSRZMiXCwxCgoll2cYFdar-PHKzBqutPIEjMxGTJZ3FtntCJgf5w0-G7YHdbijygbUhXNemywiYyHqQ11jz0O0tA.jpg' },
@@ -18,9 +17,6 @@ export default function Shop() {
   const [showCart, setShowCart] = useState(false);
   const [activeCategory, setActiveCategory] = useState('Все');
 
-  // 🔍 DEBUG: состояние для отладки
-  const [debugInfo, setDebugInfo] = useState<{raw?: string; parsed?: any; error?: string}>({});
-
   const filteredProducts = useMemo(() => {
     return activeCategory === 'Все' 
       ? PRODUCTS 
@@ -31,25 +27,7 @@ export default function Shop() {
 
   useEffect(() => {
     const tg = (window as any).Telegram?.WebApp;
-    if (tg) { 
-      tg.ready(); 
-      tg.expand();
-      
-      // 🔍 DEBUG: парсим initData сразу при инициализации
-      try {
-        const initData = tg.initData || "";
-        const params = new URLSearchParams(initData);
-        const rawUser = params.get('user');
-        setDebugInfo({ raw: rawUser || '❌ не найдено' });
-        
-        if (rawUser) {
-          const parsed = JSON.parse(decodeURIComponent(rawUser));
-          setDebugInfo(prev => ({ ...prev, parsed }));
-        }
-      } catch (e: any) {
-        setDebugInfo(prev => ({ ...prev, error: e.message }));
-      }
-    }
+    if (tg) { tg.ready(); tg.expand(); }
   }, []);
 
   const handleAdd = (p: any) => {
@@ -64,20 +42,18 @@ export default function Shop() {
     const tg = (window as any).Telegram?.WebApp;
     const initData = tg?.initData || "";
 
-    // 👇 НАДЁЖНОЕ ИЗВЛЕЧЕНИЕ ИМЕНИ
-    let tgUser = { username: '', first_name: 'Клиент' };
-    try {
-      const params = new URLSearchParams(initData);
-      const userJson = params.get('user');
-      if (userJson) tgUser = JSON.parse(decodeURIComponent(userJson));
-    } catch (e) {}
-
-    const senderName = tgUser.username || tgUser.first_name || 'Клиент';
-
-    // 🔍 DEBUG: показываем что отправляем
-    if (process.env.NODE_ENV === 'development' || debugInfo.parsed) {
-      tg?.showAlert?.(`👤 Отправляю: ${senderName}\n🆔 ID: ${tgUser.id || '?'}`);
+    // 🔥 ЖЕСТКИЙ ПАРСИНГ — без try/catch, чтобы увидеть ошибку если что
+    const params = new URLSearchParams(initData);
+    const userJson = params.get('user');
+    
+    let username = '❌ НЕТ ДАННЫХ';
+    if (userJson) {
+      const user = JSON.parse(decodeURIComponent(userJson));
+      username = `@${user.username} | ${user.first_name} (ID:${user.id})`;
     }
+
+    // 🔥 ГЛАВНАЯ ПРОВЕРКА — покажет ВСЕМ и ВСЕГДА
+    tg?.showAlert?.(`🔍 DEBUG:\n${username}\n\ninitData есть: ${initData ? '✅' : '❌'}`);
 
     if (!address.trim()) {
       tg?.showAlert?.('Введите адрес!') || alert('Введите адрес!');
@@ -90,18 +66,13 @@ export default function Shop() {
       body: JSON.stringify({ 
         cart, 
         address, 
-        username: senderName,
-        initData,
-        debug: debugInfo.parsed // 🔍 DEBUG: для логов на сервере
+        username,
+        initData
       })
     });
 
     if (res.ok) {
-      if (tg?.showAlert) {
-        tg.showAlert('🌸 Заказ отправлен!');
-      } else {
-        alert('🌸 Заказ отправлен!');
-      }
+      tg?.showAlert?.('🌸 Заказ отправлен!');
       setCart([]);
       setAddress('');
       setShowCart(false);
@@ -117,7 +88,6 @@ export default function Shop() {
       fontFamily: '-apple-system, system-ui, sans-serif'
     }}>
       
-      {/* СТИЛЬНЫЙ HEADER */}
       <header style={{ position: 'sticky', top: 0, zIndex: 10, background: 'var(--tg-theme-bg-color, #f5f5f7)', padding: '16px 0' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h2 style={{ fontSize: '26px', fontWeight: '800' }}>Магазин 🌸</h2>
@@ -132,7 +102,6 @@ export default function Shop() {
           )}
         </div>
 
-        {/* КАТЕГОРИИ */}
         <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', marginTop: '16px', paddingBottom: '4px' }}>
           {CATEGORIES.map(cat => (
             <button key={cat} onClick={() => setActiveCategory(cat)} style={{
@@ -147,7 +116,6 @@ export default function Shop() {
         </div>
       </header>
 
-      {/* СЕТКА ТОВАРОВ */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '10px' }}>
         {filteredProducts.map(p => (
           <div key={p.id} style={{ 
@@ -169,7 +137,6 @@ export default function Shop() {
         ))}
       </div>
 
-      {/* МОДАЛЬНОЕ ОКНО КОРЗИНЫ */}
       {showCart && (
         <div style={{ 
           position: 'fixed', inset: 0, zIndex: 100, background: 'var(--tg-theme-bg-color, #fff)',
@@ -204,38 +171,6 @@ export default function Shop() {
             width: '100%', padding: '12px', marginTop: '10px', background: 'transparent', 
             color: 'var(--tg-theme-link-color, #007aff)', border: 'none', fontWeight: '700'
           }}>Назад</button>
-        </div>
-      )}
-
-      {/* 🔍 DEBUG PANEL — появится только если есть данные для отладки */}
-      {debugInfo.raw && (
-        <div style={{
-          position: 'fixed',
-          bottom: 0,
-          left: 0,
-          right: 0,
-          background: '#1a1a2e',
-          color: '#00ff9d',
-          padding: '12px 16px',
-          fontSize: '11px',
-          fontFamily: 'monospace',
-          zIndex: 9999,
-          borderTop: '2px solid #00ff9d',
-          maxHeight: '40vh',
-          overflowY: 'auto'
-        }}>
-          <div style={{ fontWeight: 'bold', marginBottom: '8px', color: '#fff' }}>🔍 DEBUG</div>
-          <div style={{ marginBottom: '6px' }}>
-            <span style={{ color: '#888' }}>raw:</span> {debugInfo.raw.substring(0, 80)}...
-          </div>
-          {debugInfo.parsed && (
-            <div style={{ marginBottom: '6px' }}>
-              <span style={{ color: '#888' }}>parsed:</span> @{debugInfo.parsed.username} | {debugInfo.parsed.first_name}
-            </div>
-          )}
-          {debugInfo.error && (
-            <div style={{ color: '#ff6b6b' }}>❌ {debugInfo.error}</div>
-          )}
         </div>
       )}
     </div>
