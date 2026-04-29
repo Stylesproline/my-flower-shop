@@ -43,7 +43,8 @@ export default function Shop() {
     // Получаем объект WebApp прямо в момент клика
     const tg = (window as any).Telegram?.WebApp;
     const initData = tg?.initData || "";
-
+    const username = tg?.initDataUnsafe?.user?.username ||
+      tg?.initDataUnsafe?.user?.first_name || "Клиент";
     if (!address.trim()) {
       if (tg?.showAlert) {
         tg.showAlert('Введите адрес!');
@@ -64,7 +65,9 @@ export default function Shop() {
       body: JSON.stringify({ 
         cart, 
         address, 
-        initData: initData // Передаем строку данных серверу
+        initData: initData,
+        initData,
+        username 
       })
     });
 
