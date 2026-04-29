@@ -10,25 +10,27 @@ export async function POST(req: Request) {
   try {
     const { cart, address, initData } = await req.json();
     
-    // Пытаемся достать юзера, но если не выйдет — не падаем
-    let clientName = "Неизвестный клиент";
-    let userId: any = null;
-
+    // 1. Парсим данные пользователя
+    let userData: any = {};
     try {
       const urlParams = new URLSearchParams(initData);
-      const userRaw = urlParams.get('user');
-      if (userRaw) {
-        const user = JSON.parse(decodeURIComponent(userRaw));
-        userId = user.id;
-        clientName = user.username ? `@${user.username}` : `${user.first_name || ''} ${user.last_name || ''}`.trim();
+      const userString = urlParams.get('user');
+      if (userString) {
+        userData = JSON.parse(decodeURIComponent(userString));
       }
     } catch (e) {
-      console.log("Ошибка парсинга юзера, продолжаем...");
+      console.error('Ошибка парсинга:', e);
     }
+
+    const userId = userData.id;
+    // Формируем имя: Никнейм или Имя + Фамилия
+    const clientName = userData.username 
+      ? `@${userData.username}` 
+      : `${userData.first_name || 'Клиент'} ${userData.last_name || ''}`.trim();
 
     const total = cart.reduce((s: number, i: any) => s + (i.price * i.count), 0);
 
-    // СОХРАНЯЕМ В БАЗУ (если юзер нашелся)
+    // 2. Сохраняем в базу (для истории и рассылок)
     if (userId) {
       await supabase.from('orders').insert({
         user_id: userId,
@@ -38,20 +40,28 @@ export async function POST(req: Request) {
       });
     }
 
-    // ТЕКСТ ДЛЯ АДМИНА
+    // 3. Формируем сообщение для админа с КЛИКАБЕЛЬНЫМ ID
     const itemsText = cart.map((i: any) => `• ${i.name} x${i.count}`).join('\n');
-    const adminMsg = `🌸 *НОВЫЙ ЗАКАЗ*\n\n👤 *Клиент:* ${clientName}\n🏠 *Адрес:* ${address}\n\n📦 *Товары:*\n${itemsText}\n\n💰 *Итого: ${total} ₽*`;
+    
+    // Ссылка вида [текст](tg://user?id=123) позволяет открыть профиль любого юзера
+    const userLink = `[${userId}](tg://user?id=${userId})`;
+
+    const adminMsg = `🌸 *НОВЫЙ ЗАКАЗ*\n\n` +
+                     `👤 *Клиент:* ${clientName}\n` +
+                     `🆔 *ID:* ${userLink}\n` +
+                     `🏠 *Адрес:* ${address}\n\n` +
+                     `📦 *Товары:*\n${itemsText}\n\n` +
+                     `💰 *ИТОГО: ${total} ₽*`;
     
     await bot.sendMessage(process.env.ADMIN_ID!, adminMsg, { parse_mode: 'Markdown' });
 
-    // ПОДТВЕРЖДЕНИЕ КЛИЕНТУ (если есть ID)
+    // 4. Подтверждение клиенту
     if (userId) {
-      await bot.sendMessage(userId, `✅ ${clientName}, ваш заказ на ${total} ₽ принят!`);
+      await bot.sendMessage(userId, `✅ *${userData.first_name}*, ваш заказ принят! \nСумма: ${total} ₽. \nОжидайте звонка.`, { parse_mode: 'Markdown' });
     }
 
     return NextResponse.json({ success: true });
   } catch (err: any) {
-    console.error('Критическая ошибка:', err.message);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
