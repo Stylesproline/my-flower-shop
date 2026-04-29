@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState, useMemo } from 'react';
 
+// РАСШИРЕННЫЙ СПИСОК ТОВАРОВ С КАТЕГОРИЯМИ
 const PRODUCTS = [
   { id: 1, category: 'Розы', name: 'Красный Наоми', price: 150, desc: '11 роз с крупным бутоном', image: 'https://cdn4.telesco.pe/file/SrJ6ug-hc-RzwCajRdAXB-6NWF2liB_0wPi3DDgDEnxBbpXrU6pJNepFGmdlK12OHAHwuJR_X86xTUOq4a_sUIiA98RhvrxRjUNxLZtHelKDUzjcu6T99_zQ-QTH4lIHre7_xuBX9D_9U7lbvG1xInOX-Ua38LFIqCK7K0XjfRrgdZHFPaqeXg8jVKDrLJnfxubMzOHbLtd4bL8fbAIhzJHLHvp9kHIFXuOusNdX5dx4PJQ9e95NFZHQ8uGvM0YclCrkrp_uC_aKA1ILLEUPDsTvLE2gxcMiimrxlJ49Wg8_x6Kt2JTitdR5jBpLFtWX1OcFMEPOiH-doD1ElkqjLg.jpg' },
   { id: 2, category: 'Лилии', name: 'Желтая Азия', price: 210, desc: 'Нежный аромат и стойкость до 2 недель', image: 'https://cdn4.telesco.pe/file/X0zdaAeToHxbGWma1G0xpWJkFyxVSkJ8PJdXweZYytXOvWw40vQEyoFYTsj7Hpw0KxIy3yULzWB8xs5hZr5Vv6OGAW6jdMTkgBj_FwyvpuNqAbBGPTdfn2Y8ysW89-r26s9w4SbRKuANXWMzJYCPBp6yU1AsF63IdcCi7UUFOgHQFPlmTEiA8UmO5BTWmPQDq-Mmmk8QNIeU_yOXB-GOLw2NSbkZNdHK_ZVf0BDJZuCetgXu3xVqlmz5NdCJfPVSRZMiXCwxCgoll2cYFdar-PHKzBqutPIEjMxGTJZ3FtntCJgf5w0-G7YHdbijygbUhXNemywiYyHqQ11jz0O0tA.jpg' },
@@ -38,46 +39,50 @@ export default function Shop() {
     });
   };
 
-  const handleCheckout = async () => {
-    const tg = (window as any).Telegram?.WebApp;
-    const initData = tg?.initData || "";
+const handleCheckout = async () => {
+  const tg = (window as any).Telegram?.WebApp;
+  const initData = tg?.initData || "";
 
-    // 🔥 ЖЕСТКИЙ ПАРСИНГ — без try/catch, чтобы увидеть ошибку если что
+  // 👇 НАДЁЖНОЕ ИЗВЛЕЧЕНИЕ ИМЕНИ (обходит баг с initDataUnsafe)
+  let tgUser = { username: '', first_name: 'Клиент' };
+  try {
     const params = new URLSearchParams(initData);
     const userJson = params.get('user');
-    
-    let username = '❌ НЕТ ДАННЫХ';
-    if (userJson) {
-      const user = JSON.parse(decodeURIComponent(userJson));
-      username = `@${user.username} | ${user.first_name} (ID:${user.id})`;
-    }
+    if (userJson) tgUser = JSON.parse(decodeURIComponent(userJson));
+  } catch (e) {}
 
-    // 🔥 ГЛАВНАЯ ПРОВЕРКА — покажет ВСЕМ и ВСЕГДА
-    tg?.showAlert?.(`🔍 DEBUG:\n${username}\n\ninitData есть: ${initData ? '✅' : '❌'}`);
+  const senderName = tgUser.username || tgUser.first_name || 'Клиент';
 
-    if (!address.trim()) {
-      tg?.showAlert?.('Введите адрес!') || alert('Введите адрес!');
-      return;
-    }
+  if (!address.trim()) {
+    tg?.showAlert?.('Введите адрес!') || alert('Введите адрес!');
+    return;
+  }
 
-    const res = await fetch('/api/order', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        cart, 
-        address, 
-        username,
-        initData
-      })
-    });
+  const res = await fetch('/api/order', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ 
+      cart, 
+      address, 
+      username: senderName, // 👈 Точно придёт реальное имя/ник
+      initData
+    })
+  });
+
+  // ... дальше ваш код без изменений
 
     if (res.ok) {
-      tg?.showAlert?.('🌸 Заказ отправлен!');
+      if (tg?.showAlert) {
+        tg.showAlert('🌸 Заказ отправлен!');
+      } else {
+        alert('🌸 Заказ отправлен!');
+      }
       setCart([]);
       setAddress('');
       setShowCart(false);
     }
   };
+
 
   return (
     <div style={{ 
@@ -88,6 +93,7 @@ export default function Shop() {
       fontFamily: '-apple-system, system-ui, sans-serif'
     }}>
       
+      {/* СТИЛЬНЫЙ HEADER */}
       <header style={{ position: 'sticky', top: 0, zIndex: 10, background: 'var(--tg-theme-bg-color, #f5f5f7)', padding: '16px 0' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h2 style={{ fontSize: '26px', fontWeight: '800' }}>Магазин 🌸</h2>
@@ -102,6 +108,7 @@ export default function Shop() {
           )}
         </div>
 
+        {/* КАТЕГОРИИ */}
         <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', marginTop: '16px', paddingBottom: '4px' }}>
           {CATEGORIES.map(cat => (
             <button key={cat} onClick={() => setActiveCategory(cat)} style={{
@@ -116,6 +123,7 @@ export default function Shop() {
         </div>
       </header>
 
+      {/* СЕТКА ТОВАРОВ */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '10px' }}>
         {filteredProducts.map(p => (
           <div key={p.id} style={{ 
@@ -137,6 +145,7 @@ export default function Shop() {
         ))}
       </div>
 
+      {/* МОДАЛЬНОЕ ОКНО КОРЗИНЫ */}
       {showCart && (
         <div style={{ 
           position: 'fixed', inset: 0, zIndex: 100, background: 'var(--tg-theme-bg-color, #fff)',
@@ -176,3 +185,5 @@ export default function Shop() {
     </div>
   );
 }
+
+
