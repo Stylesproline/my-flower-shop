@@ -18,6 +18,9 @@ export default function Shop() {
   const [showCart, setShowCart] = useState(false);
   const [activeCategory, setActiveCategory] = useState('Все');
 
+  // 🔍 DEBUG: состояние для отладки
+  const [debugInfo, setDebugInfo] = useState<{raw?: string; parsed?: any; error?: string}>({});
+
   const filteredProducts = useMemo(() => {
     return activeCategory === 'Все' 
       ? PRODUCTS 
@@ -28,7 +31,25 @@ export default function Shop() {
 
   useEffect(() => {
     const tg = (window as any).Telegram?.WebApp;
-    if (tg) { tg.ready(); tg.expand(); }
+    if (tg) { 
+      tg.ready(); 
+      tg.expand();
+      
+      // 🔍 DEBUG: парсим initData сразу при инициализации
+      try {
+        const initData = tg.initData || "";
+        const params = new URLSearchParams(initData);
+        const rawUser = params.get('user');
+        setDebugInfo({ raw: rawUser || '❌ не найдено' });
+        
+        if (rawUser) {
+          const parsed = JSON.parse(decodeURIComponent(rawUser));
+          setDebugInfo(prev => ({ ...prev, parsed }));
+        }
+      } catch (e: any) {
+        setDebugInfo(prev => ({ ...prev, error: e.message }));
+      }
+    }
   }, []);
 
   const handleAdd = (p: any) => {
@@ -39,37 +60,41 @@ export default function Shop() {
     });
   };
 
-const handleCheckout = async () => {
-  const tg = (window as any).Telegram?.WebApp;
-  const initData = tg?.initData || "";
+  const handleCheckout = async () => {
+    const tg = (window as any).Telegram?.WebApp;
+    const initData = tg?.initData || "";
 
-  // 👇 НАДЁЖНОЕ ИЗВЛЕЧЕНИЕ ИМЕНИ (обходит баг с initDataUnsafe)
-  let tgUser = { username: '', first_name: 'Клиент' };
-  try {
-    const params = new URLSearchParams(initData);
-    const userJson = params.get('user');
-    if (userJson) tgUser = JSON.parse(decodeURIComponent(userJson));
-  } catch (e) {}
+    // 👇 НАДЁЖНОЕ ИЗВЛЕЧЕНИЕ ИМЕНИ
+    let tgUser = { username: '', first_name: 'Клиент' };
+    try {
+      const params = new URLSearchParams(initData);
+      const userJson = params.get('user');
+      if (userJson) tgUser = JSON.parse(decodeURIComponent(userJson));
+    } catch (e) {}
 
-  const senderName = tgUser.username || tgUser.first_name || 'Клиент';
+    const senderName = tgUser.username || tgUser.first_name || 'Клиент';
 
-  if (!address.trim()) {
-    tg?.showAlert?.('Введите адрес!') || alert('Введите адрес!');
-    return;
-  }
+    // 🔍 DEBUG: показываем что отправляем
+    if (process.env.NODE_ENV === 'development' || debugInfo.parsed) {
+      tg?.showAlert?.(`👤 Отправляю: ${senderName}\n🆔 ID: ${tgUser.id || '?'}`);
+    }
 
-  const res = await fetch('/api/order', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ 
-      cart, 
-      address, 
-      username: senderName, // 👈 Точно придёт реальное имя/ник
-      initData
-    })
-  });
+    if (!address.trim()) {
+      tg?.showAlert?.('Введите адрес!') || alert('Введите адрес!');
+      return;
+    }
 
-  // ... дальше ваш код без изменений
+    const res = await fetch('/api/order', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        cart, 
+        address, 
+        username: senderName,
+        initData,
+        debug: debugInfo.parsed // 🔍 DEBUG: для логов на сервере
+      })
+    });
 
     if (res.ok) {
       if (tg?.showAlert) {
@@ -82,7 +107,6 @@ const handleCheckout = async () => {
       setShowCart(false);
     }
   };
-
 
   return (
     <div style={{ 
@@ -182,8 +206,38 @@ const handleCheckout = async () => {
           }}>Назад</button>
         </div>
       )}
+
+      {/* 🔍 DEBUG PANEL — появится только если есть данные для отладки */}
+      {debugInfo.raw && (
+        <div style={{
+          position: 'fixed',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          background: '#1a1a2e',
+          color: '#00ff9d',
+          padding: '12px 16px',
+          fontSize: '11px',
+          fontFamily: 'monospace',
+          zIndex: 9999,
+          borderTop: '2px solid #00ff9d',
+          maxHeight: '40vh',
+          overflowY: 'auto'
+        }}>
+          <div style={{ fontWeight: 'bold', marginBottom: '8px', color: '#fff' }}>🔍 DEBUG</div>
+          <div style={{ marginBottom: '6px' }}>
+            <span style={{ color: '#888' }}>raw:</span> {debugInfo.raw.substring(0, 80)}...
+          </div>
+          {debugInfo.parsed && (
+            <div style={{ marginBottom: '6px' }}>
+              <span style={{ color: '#888' }}>parsed:</span> @{debugInfo.parsed.username} | {debugInfo.parsed.first_name}
+            </div>
+          )}
+          {debugInfo.error && (
+            <div style={{ color: '#ff6b6b' }}>❌ {debugInfo.error}</div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
-
-
