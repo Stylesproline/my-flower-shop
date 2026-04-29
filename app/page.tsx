@@ -4,7 +4,9 @@ import { useEffect, useState, useMemo, useCallback } from 'react';
 const PRODUCTS = [
   { id: 1, category: 'Розы', name: 'Красный Наоми', price: 150, desc: '11 роз с крупным бутоном', image: 'https://telesco.pe' },
   { id: 2, category: 'Лилии', name: 'Желтая Азия', price: 210, desc: 'Нежный аромат и стойкость до 2 недель', image: 'https://telesco.pe' },
-  { id: 3, category: 'Букеты', name: 'Гортензия Микс', price: 72, desc: 'Объемный букет для особого случая', image: 'https://telesco.pe' }
+  { id: 3, category: 'Букеты', name: 'Гортензия Микс', price: 72, desc: 'Объемный букет для особого случая', image: 'https://telesco.pe' },
+  { id: 4, category: 'Розы', name: 'Белый Шоколад', price: 170, desc: 'Белоснежные розы высшего сорта', image: 'https://telesco.pe' },
+  { id: 5, category: 'Букеты', name: 'Полевой сон', price: 120, desc: 'Ромашки и сухоцветы в крафте', image: 'https://telesco.pe' },
 ];
 
 const CATEGORIES = ['Все', 'Розы', 'Лилии', 'Букеты'];
@@ -14,25 +16,27 @@ export default function Shop() {
   const [address, setAddress] = useState('');
   const [showCart, setShowCart] = useState(false);
   const [activeCategory, setActiveCategory] = useState('Все');
-  const [debug, setDebug] = useState('Инициализация скрипта...');
+  const [debug, setDebug] = useState('Ожидание SDK...');
 
+  // Инициализация Telegram
   useEffect(() => {
-    // РУЧНАЯ ЗАГРУЗКА СКРИПТА
-    const script = document.createElement('script');
-    script.src = 'https://telegram.org';
-    script.async = true;
-    script.onload = () => {
+    const init = () => {
       const tg = (window as any).Telegram?.WebApp;
       if (tg) {
         tg.ready();
         tg.expand();
-        setDebug(tg.initData ? `✅ OK: ${tg.initDataUnsafe?.user?.first_name || 'Авторизован'}` : '❌ Скрипт загружен, но initData пуст');
+        if (tg.initData) {
+          setDebug(`✅ OK: ${tg.initDataUnsafe?.user?.first_name || 'Авторизован'}`);
+        } else {
+          setDebug('⚠️ SDK OK, НО ДАННЫХ НЕТ (Запусти через бота)');
+        }
       } else {
-        setDebug('❌ Объект Telegram не найден после загрузки');
+        setDebug('❌ SDK НЕ НАЙДЕН (Проверь public/telegram-web-app.js)');
       }
     };
-    script.onerror = () => setDebug('❌ Ошибка загрузки скрипта с сервера Telegram');
-    document.head.appendChild(script);
+    init();
+    const interval = setInterval(init, 1000);
+    return () => clearInterval(interval);
   }, []);
 
   const filteredProducts = useMemo(() => {
@@ -70,19 +74,19 @@ export default function Shop() {
   }, [cart, address]);
 
   return (
-    <div style={{ padding: '0 16px 120px', background: '#f5f5f7', color: '#000', minHeight: '100vh', fontFamily: 'sans-serif' }}>
+    <div style={{ padding: '0 16px 120px', background: 'var(--tg-theme-bg-color, #f5f5f7)', color: 'var(--tg-theme-text-color, #000)', minHeight: '100vh', fontFamily: 'sans-serif' }}>
       
-      {/* КРАСНАЯ СТРОКА ДИАГНОСТИКИ */}
-      <div style={{ fontSize: '12px', color: 'red', padding: '10px 0', fontWeight: 'bold' }}>
+      {/* ПАНЕЛЬ СТАТУСА */}
+      <div style={{ fontSize: '10px', color: debug.includes('✅') ? 'green' : 'red', padding: '10px 0', fontWeight: 'bold' }}>
         {debug}
       </div>
 
-      <header style={{ position: 'sticky', top: 0, zIndex: 10, background: '#f5f5f7', padding: '16px 0' }}>
+      <header style={{ position: 'sticky', top: 0, zIndex: 10, background: 'var(--tg-theme-bg-color, #f5f5f7)', padding: '16px 0' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h2 style={{ fontSize: '26px', fontWeight: '800', margin: 0 }}>Магазин 🌸</h2>
           {cart.length > 0 && (
-            <div onClick={() => setShowCart(true)} style={{ background: '#007aff', color: 'white', padding: '8px 16px', borderRadius: '20px', fontWeight: 'bold', cursor: 'pointer' }}>
-              🛒 {cart.reduce((a, b) => a + b.count, 0)}
+            <div onClick={() => setShowCart(true)} style={{ background: 'var(--tg-theme-button-color, #007aff)', color: 'white', padding: '8px 16px', borderRadius: '20px', fontWeight: 'bold', cursor: 'pointer' }}>
+              🛒 {cart.reduce((a,b) => a + b.count, 0)}
             </div>
           )}
         </div>
@@ -102,8 +106,8 @@ export default function Shop() {
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '10px' }}>
         {filteredProducts.map(p => (
-          <div key={p.id} style={{ background: '#fff', borderRadius: '24px', padding: '12px', display: 'flex', flexDirection: 'column', boxShadow: '0 4px 10px rgba(0,0,0,0.05)' }}>
-            <img src={p.image} style={{ width: '100%', height: '120px', objectFit: 'cover', borderRadius: '18px' }} alt="" />
+          <div key={p.id} style={{ background: 'var(--tg-theme-secondary-bg-color, #fff)', borderRadius: '24px', padding: '12px', display: 'flex', flexDirection: 'column', boxShadow: '0 4px 10px rgba(0,0,0,0.05)' }}>
+            <img src={p.image} style={{ width: '100%', height: '120px', objectFit: 'cover', borderRadius: '18px' }} />
             <div style={{ fontWeight: '700', fontSize: '15px', marginTop: '10px' }}>{p.name}</div>
             <div style={{ fontSize: '11px', color: '#8e8e93', margin: '4px 0', flex: 1 }}>{p.desc}</div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px' }}>
@@ -115,7 +119,7 @@ export default function Shop() {
       </div>
 
       {showCart && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 100, background: '#fff', padding: '24px', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'var(--tg-theme-bg-color, #fff)', padding: '24px', display: 'flex', flexDirection: 'column' }}>
           <h3 style={{ fontSize: '28px', fontWeight: '800' }}>Ваш заказ</h3>
           <div style={{ flex: 1, overflowY: 'auto' }}>
             {cart.map(i => (
@@ -125,7 +129,12 @@ export default function Shop() {
               </div>
             ))}
             <div style={{ textAlign: 'right', marginTop: '20px', fontSize: '22px', fontWeight: '800' }}>Итого: {total}₽</div>
-            <textarea placeholder="Адрес и телефон..." value={address} onChange={e => setAddress(e.target.value)} style={{ width: '100%', height: '100px', padding: '15px', marginTop: '20px', borderRadius: '18px', border: '1px solid #d1d1d6', boxSizing: 'border-box' }} />
+            <textarea 
+              placeholder="Адрес и телефон для связи" 
+              value={address} 
+              onChange={e => setAddress(e.target.value)} 
+              style={{ width: '100%', height: '100px', padding: '15px', marginTop: '20px', borderRadius: '18px', border: '1px solid #d1d1d6', boxSizing: 'border-box', background: 'var(--tg-theme-secondary-bg-color, #f2f2f7)', color: 'black' }} 
+            />
           </div>
           <button onClick={handleCheckout} style={{ width: '100%', padding: '18px', background: '#34c759', color: '#fff', border: 'none', borderRadius: '20px', fontWeight: '800', fontSize: '18px' }}>ОФОРМИТЬ</button>
           <button onClick={() => setShowCart(false)} style={{ width: '100%', padding: '12px', marginTop: '10px', background: 'transparent', color: '#007aff', border: 'none' }}>Назад</button>

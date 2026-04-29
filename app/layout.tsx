@@ -1,5 +1,9 @@
 import './globals.css'
-import Script from 'next/script'
+
+export const metadata = {
+  title: 'Flower Shop Mini App',
+  description: 'Заказ цветов через Telegram',
+}
 
 export default function RootLayout({
   children,
@@ -9,13 +13,10 @@ export default function RootLayout({
   return (
     <html lang="ru">
       <head>
-        {/* Подключаем SDK через специальный компонент Next.js */}
-        <Script 
-          src="https://telegram.org" 
-          strategy="beforeInteractive" 
-        />
+        {/* Загружаем локальную копию SDK из папки public */}
+        <script src="/telegram-web-app.js" defer></script>
       </head>
-      <body className="antialiased">
+      <body>
         {children}
       </body>
     </html>
