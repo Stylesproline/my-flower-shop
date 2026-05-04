@@ -2,14 +2,14 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
 
 const PRODUCTS = [
-  { id: 1, category: 'Розы', name: 'Красный Наоми', price: 150, desc: '11 роз с крупным бутоном', image: '/images/rose-naomi.jpg' },
-  { id: 2, category: 'Розы', name: 'Розовый фламинго', price: 210, desc: 'Нежный аромат и стойкость до 2 недель', image: '/images/lily-asia.jpg' },
-  { id: 3, category: 'Букеты', name: 'Розы Микс', price: 72, desc: 'Объемный букет для особого случая', image: '/images/lily-asia.jpg' },
-  { id: 4, category: 'Розы', name: 'Белый Шоколад', price: 170, desc: 'Белоснежные розы высшего сорта', image: '/images/field-dream.jpg' },
-  { id: 5, category: 'Букеты', name: 'Полевой сон', price: 120, desc: 'Ромашки и сухоцветы в крафте', image: '/images/7kmUntitled.jpeg' },
+  { id: 1, category: 'Розы', name: 'Красный Наоми', price: 79, desc: '11 роз с крупным бутоном', image: '/images/rose-naomi.jpg' },
+  { id: 2, category: 'Розы', name: 'Розовый фламинго', price: 89, desc: 'Нежный аромат и стойкость до 2 недель', image: '/images/lily-asia.jpg' },
+  { id: 3, category: 'Букеты', name: 'Розы Лилии Микс', price: 299, desc: 'Цветочная подписка 1 раз в неделю/на 1 месяц', image: '/images/lili-rose.jpeg' },
+  { id: 4, category: 'Розы', name: 'Белый Шоколад', price: 89 , desc: 'Белоснежные розы высшего сорта ', image: '/images/field-dream.jpg' },
+  { id: 5, category: 'Пионы', name: 'Розы Лилии Микс', price: 120, desc: 'Розы и лилии', image: '/images/yquued.jpeg' },
 ];
 
-const CATEGORIES = ['Все', 'Розы', 'Лилии', 'Букеты'];
+const CATEGORIES = ['Все', 'Розы', 'Пионы', 'Букеты'];
 
 export default function Shop() {
   const [cart, setCart] = useState<any[]>([]);
