@@ -44,7 +44,7 @@ export async function POST(req: Request) {
     if (text === '/admin' && chatId === adminId) {
       const { data: products } = await supabase.from('products').select('*');
       const buttons = products?.map(p => ([{ 
-        text: `💰 ${p.name}: ${p.price}₽`, 
+        text: `💰 ${p.name}: ${p.price}BYN`, 
         callback_data: `price_${p.id}` 
       }])) || [];
 

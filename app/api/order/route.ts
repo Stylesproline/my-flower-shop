@@ -51,13 +51,13 @@ export async function POST(req: Request) {
                      `🆔 *ID:* ${userLink}\n` +
                      `🏠 *Адрес:* ${address}\n\n` +
                      `📦 *Товары:*\n${itemsText}\n\n` +
-                     `💰 *ИТОГО: ${total} ₽*`;
+                     `💰 *ИТОГО: ${total} BYN*`;
     
     await bot.sendMessage(process.env.ADMIN_ID!, adminMsg, { parse_mode: 'Markdown' });
 
     // 4. Подтверждение клиенту
     if (userId) {
-      await bot.sendMessage(userId, `✅ *${userData.first_name}*, ваш заказ принят! \nСумма: ${total} ₽. \nОжидайте звонка.`, { parse_mode: 'Markdown' });
+      await bot.sendMessage(userId, `✅ *${userData.first_name}*, ваш заказ принят! \nСумма: ${total} BYN. \nОжидайте звонка.`, { parse_mode: 'Markdown' });
     }
 
     return NextResponse.json({ success: true });

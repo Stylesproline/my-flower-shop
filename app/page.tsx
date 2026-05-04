@@ -111,7 +111,7 @@ export default function Shop() {
             <div style={{ fontWeight: '700', fontSize: '15px', marginTop: '10px' }}>{p.name}</div>
             <div style={{ fontSize: '11px', color: '#8e8e93', margin: '4px 0', flex: 1 }}>{p.desc}</div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px' }}>
-              <span style={{ fontWeight: '800', color: '#34c759' }}>{p.price}₽</span>
+              <span style={{ fontWeight: '800', color: '#34c759' }}>{p.price}BYN</span>
               <button onClick={() => handleAdd(p)} style={{ background: '#007aff', border: 'none', width: '32px', height: '32px', borderRadius: '50%', color: '#fff', fontSize: '18px' }}>+</button>
             </div>
           </div>
@@ -125,10 +125,10 @@ export default function Shop() {
             {cart.map(i => (
               <div key={i.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #e5e5ea' }}>
                 <span>{i.name} x{i.count}</span>
-                <span>{i.price * i.count}₽</span>
+                <span>{i.price * i.count}BYN</span>
               </div>
             ))}
-            <div style={{ textAlign: 'right', marginTop: '20px', fontSize: '22px', fontWeight: '800' }}>Итого: {total}₽</div>
+            <div style={{ textAlign: 'right', marginTop: '20px', fontSize: '22px', fontWeight: '800' }}>Итого: {total}BYN</div>
             <textarea 
               placeholder="Адрес и телефон для связи" 
               value={address} 
