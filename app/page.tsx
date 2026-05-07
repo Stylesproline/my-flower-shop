@@ -7,7 +7,7 @@ const PRODUCTS = [
   { id: 3, category: 'Букеты', name: 'Розы Лилии Микс', price: 299, desc: 'Цветочная подписка 1 раз в неделю/на 1 месяц', image: '/images/lili-rose.jpeg' },
   { id: 4, category: 'Розы', name: 'Белый Шоколад', price: 89 , desc: 'Белоснежные розы высшего сорта/10 шт. ', image: '/images/field-dream.jpg' },
   { id: 5, category: 'Пионы', name: 'Пион белый ', price: 87, desc: 'Пион белый 9 шт.', image: '/images/yquued.jpeg' },
-  { id: 3, category: 'Букеты', name: 'Хризантемы одноголовые', price: 57, desc: 'Хризантемы 9 шт.', image: '/images/77ntitled.jpeg' },
+  { id: 6, category: 'Букеты', name: 'Хризантемы одноголовые', price: 57, desc: 'Хризантемы 9 шт.', image: '/images/77ntitled.jpeg' },
 ];
 
 const CATEGORIES = ['Все', 'Розы', 'Пионы', 'Букеты'];
