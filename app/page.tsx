@@ -2,11 +2,12 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
 
 const PRODUCTS = [
-  { id: 1, category: 'Розы', name: 'Красный Наоми', price: 79, desc: '11 роз с крупным бутоном', image: '/images/rose-naomi.jpg' },
+  { id: 1, category: 'Розы', name: 'Красный Наоми', price: 79, desc: '10 роз с крупным бутоном', image: '/images/rose-naomi.jpg' },
   { id: 2, category: 'Розы', name: 'Розовый фламинго', price: 89, desc: 'Нежный аромат и стойкость до 2 недель', image: '/images/lily-asia.jpg' },
   { id: 3, category: 'Букеты', name: 'Розы Лилии Микс', price: 299, desc: 'Цветочная подписка 1 раз в неделю/на 1 месяц', image: '/images/lili-rose.jpeg' },
-  { id: 4, category: 'Розы', name: 'Белый Шоколад', price: 89 , desc: 'Белоснежные розы высшего сорта ', image: '/images/field-dream.jpg' },
+  { id: 4, category: 'Розы', name: 'Белый Шоколад', price: 89 , desc: 'Белоснежные розы высшего сорта/10 шт. ', image: '/images/field-dream.jpg' },
   { id: 5, category: 'Пионы', name: 'Пион белый ', price: 87, desc: 'Пион белый 9 шт.', image: '/images/yquued.jpeg' },
+  { id: 5, category: 'Букеты', name: 'Хризантемы одноголовые', price: 57, desc: 'Хризантемы 9 шт.', image: '/images/77ntitled.jpeg' },
 ];
 
 const CATEGORIES = ['Все', 'Розы', 'Пионы', 'Букеты'];
