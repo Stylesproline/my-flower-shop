@@ -2,12 +2,17 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 // @ts-ignore
 import TelegramBot from 'node-telegram-bot-api';
-import { Parser } from 'json2csv'; // Не забудь сделать npm install json2csv
+import { Parser } from 'json2csv';
 
 export const dynamic = 'force-dynamic';
 
 const bot = new TelegramBot(process.env.BOT_TOKEN!);
-const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!);
+
+// ВАЖНО: Используем SERVICE_ROLE_KEY для обхода RLS в админ-командах
+const supabase = createClient(
+  process.env.SUPABASE_URL!, 
+  process.env.SUPABASE_SERVICE_ROLE_KEY! 
+);
 
 export async function POST(req: Request) {
   try {
@@ -19,7 +24,7 @@ export async function POST(req: Request) {
     const adminId = Number(process.env.ADMIN_ID);
     const text = body.message?.text;
 
-    // 1. СОХРАНЯЕМ ПОЛЬЗОВАТЕЛЯ
+    // 1. СОХРАНЯЕМ ПОЛЬЗОВАТЕЛЯ (работает через service_role)
     if (body.message?.from) {
       const { id: user_id, username, first_name } = body.message.from;
       await supabase.from('users').upsert({ 
@@ -39,7 +44,7 @@ export async function POST(req: Request) {
       });
     }
 
-    // 3. АДМИН-КОМАНДЫ
+    // 3. АДМИН-КОМАНДЫ (Доступны только для ADMIN_ID)
     if (chatId === adminId) {
       
       // --- Управление товарами ---
@@ -59,7 +64,7 @@ export async function POST(req: Request) {
 
       // --- Выгрузка клиентов (/export) ---
       if (text === '/export') {
-        const { data: users } = await supabase.from('users').select('*');
+        const { data: users, error } = await supabase.from('users').select('*');
         if (users && users.length > 0) {
           const csv = new Parser().parse(users);
           await bot.sendDocument(chatId, Buffer.from(csv), {}, {
@@ -67,7 +72,7 @@ export async function POST(req: Request) {
             contentType: 'text/csv'
           });
         } else {
-          await bot.sendMessage(chatId, 'База клиентов пуста.');
+          await bot.sendMessage(chatId, 'База клиентов пуста или заблокирована.');
         }
       }
 
