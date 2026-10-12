@@ -8,7 +8,7 @@ const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_AN
 
 export async function POST(req: Request) {
   try {
-    const { cart, address, initData, location } = await req.json();
+    const { cart, address, initData } = await req.json();
     
     // 1. Парсим данные пользователя
     let userData: any = {};
@@ -29,17 +29,6 @@ export async function POST(req: Request) {
       : `${userData.first_name || 'Клиент'} ${userData.last_name || ''}`.trim();
 
     const total = cart.reduce((s: number, i: any) => s + (i.price * i.count), 0);
-    // Формируем ссылку на карту, если клиент поделился геолокацией
-const hasLocation =
-  location &&
-  Number.isFinite(location.latitude) &&
-  Number.isFinite(location.longitude) &&
-  Math.abs(location.latitude) <= 90 &&
-  Math.abs(location.longitude) <= 180;
-
-const locationText = hasLocation
-  ? `📍 Геолокация: https://www.google.com/maps?q=${location.latitude},${location.longitude}`
-  : '📍 Геолокация не указана';
 
     // 2. Сохраняем в базу (для истории и рассылок)
     if (userId) {
@@ -58,12 +47,11 @@ const locationText = hasLocation
     const userLink = `[${userId}](tg://user?id=${userId})`;
 
     const adminMsg = `🌸 *НОВЫЙ ЗАКАЗ*\n\n` +
-                 `👤 *Клиент:* ${clientName}\n` +
-                 `🆔 *ID:* ${userLink}\n` +
-                 `🏠 *Адрес:* ${address}\n` +
-                 `${locationText}\n\n` +
-                 `📦 *Товары:*\n${itemsText}\n\n` +
-                 `💰 *ИТОГО: ${total} BYN*`;
+                     `👤 *Клиент:* ${clientName}\n` +
+                     `🆔 *ID:* ${userLink}\n` +
+                     `🏠 *Адрес:* ${address}\n\n` +
+                     `📦 *Товары:*\n${itemsText}\n\n` +
+                     `💰 *ИТОГО: ${total} BYN*`;
     
     await bot.sendMessage(process.env.ADMIN_ID!, adminMsg, { parse_mode: 'Markdown' });
 
