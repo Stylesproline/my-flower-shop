@@ -8,6 +8,57 @@ type Product = {
 };
 type CartItem = Product & { count: number };
 
+const [location, setLocation] = useState<{
+  latitude: number;
+  longitude: number;
+} | null>(null);
+
+const [isGettingLocation, setIsGettingLocation] = useState(false);
+const getLocation = () => {
+  if (!navigator.geolocation) {
+    setToast("Геолокация не поддерживается браузером");
+    return;
+  }
+
+  setIsGettingLocation(true);
+
+  navigator.geolocation.getCurrentPosition(
+    (position) => {
+      const { latitude, longitude } = position.coords;
+
+      setLocation({ latitude, longitude });
+      setIsGettingLocation(false);
+
+      haptic("success");
+      setToast("Геолокация добавлена 📍");
+    },
+    (error) => {
+      setIsGettingLocation(false);
+
+      switch (error.code) {
+        case error.PERMISSION_DENIED:
+          setToast("Разреши доступ к геолокации в настройках");
+          break;
+
+        case error.POSITION_UNAVAILABLE:
+          setToast("Не удалось определить местоположение");
+          break;
+
+        case error.TIMEOUT:
+          setToast("Время ожидания геолокации истекло");
+          break;
+
+        default:
+          setToast("Не удалось получить геолокацию");
+      }
+    },
+    {
+      enableHighAccuracy: true,
+      timeout: 15000,
+      maximumAge: 60000,
+    }
+  );
+};
 const PRODUCTS: Product[] = [
   { id: 1, name: "Красный Наоми", price: 79, image: "/flowers/naomi.jpg", category: "Розы", description: "10 свежих красных роз", badge: "Хит" },
   { id: 2, name: "Розовый фламинго", price: 89, image: "/flowers/flamingo.jpg", category: "Розы", description: "Нежные розовые розы" },
@@ -34,6 +85,12 @@ const money = (n: number) => `${n.toLocaleString("ru-RU")} BYN`;
 export default function Home() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [address, setAddress] = useState("");
+  const [location, setLocation] = useState<{
+  latitude: number;
+  longitude: number;
+} | null>(null);
+
+const [isGettingLocation, setIsGettingLocation] = useState(false);
   const [category, setCategory] = useState<(typeof CATEGORIES)[number]>("Все");
   const [cartOpen, setCartOpen] = useState(false);
   const [selected, setSelected] = useState<Product | null>(null);
@@ -78,7 +135,18 @@ export default function Home() {
     setLoading(true);
     try {
       const tg = window.Telegram?.WebApp;
-      const r = await fetch("/api/order", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ cart, address: address.trim(), initData: tg?.initData || "" }) });
+      const r = await fetch("/api/order", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    cart,
+    address: address.trim(),
+    location,
+    initData: tg?.initData || "",
+  }),
+});
       if (!r.ok) throw new Error();
       haptic("success"); setCart([]); setAddress(""); setCartOpen(false); setCombo(0); setSuccess(true);
     } catch { setToast("Не удалось отправить заказ"); haptic("medium"); }
@@ -107,6 +175,42 @@ export default function Home() {
       <div className="bouquet-progress"><div className="bouquet-orbit">{cart.slice(0, 5).map((x, i) => <span key={x.id} style={{ transform: `rotate(${i * 72}deg) translateY(-42px)` }}><span>🌸</span></span>)}</div><p>{count >= 5 ? "Букет собран! Можно оформлять 🎉" : `Добавь ещё ${5 - Math.min(count, 5)} ${5 - Math.min(count, 5) === 1 ? "цветок" : "цветка"}`}</p></div>
       <div className="cart-list">{cart.map(x => <div className="cart-item" key={x.id}><div className="cart-thumb">{x.image ? <img src={x.image} alt="" /> : "🌸"}</div><div className="cart-item-main"><strong>{x.name}</strong><span>{money(x.price)}</span></div><div className="quantity"><button onClick={() => change(x.id, -1)}>−</button><b>{x.count}</b><button onClick={() => change(x.id, 1)}>+</button></div></div>)}</div>
       <label className="address-label">Адрес доставки<textarea value={address} onChange={e => setAddress(e.target.value)} placeholder="Улица, дом, квартира..." rows={2} /></label>
+      <div className="location-block">
+  <button
+    type="button"
+    className="location-button"
+    onClick={getLocation}
+    disabled={isGettingLocation}
+  >
+    {isGettingLocation
+      ? "Определяем местоположение..."
+      : location
+        ? "✓ Геолокация добавлена"
+        : "📍 Отправить геолокацию"}
+  </button>
+
+  {location && (
+    <div className="location-info">
+      <span>📍 Координаты получены</span>
+
+      <a
+        href={`https://www.google.com/maps?q=${location.latitude},${location.longitude}`}
+        target="_blank"
+        rel="noreferrer"
+      >
+        Посмотреть на карте ↗
+      </a>
+
+      <button
+        type="button"
+        className="location-remove"
+        onClick={() => setLocation(null)}
+      >
+        Удалить
+      </button>
+    </div>
+  )}
+</div>
       <div className="checkout-row"><div><small>Итого</small><strong>{money(total)}</strong></div><button className="primary-button checkout-button" disabled={!address.trim() || loading} onClick={checkout}>{loading ? "Отправляем..." : "Заказать →"}</button></div>
     </section></div>}
 
